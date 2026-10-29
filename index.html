@@ -92,6 +92,10 @@ button.chico { padding: 5px 10px; font-size: .85rem; }
 .pieza { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 7px 9px; border: 1px solid var(--linea); border-radius: 4px; background: var(--hoja); cursor: pointer; text-align: left; font-weight: 500; }
 .pieza.sel { border-color: var(--acento); box-shadow: inset 3px 0 0 var(--acento); }
 .pieza small { font-family: var(--mono); color: var(--suave); font-size: .78rem; }
+.elementos { display: grid; gap: 6px; }
+.elemento { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px; align-items: center; font-size: .82rem; }
+.elemento b { font: 600 .8rem var(--mono); color: var(--acento); min-width: 1.6em; }
+.elemento select { font: .8rem var(--texto); padding: 4px; border: 1px solid var(--linea); border-radius: 4px; background: var(--hoja); color: var(--tinta); min-width: 0; }
 .mover { display: grid; grid-template-columns: repeat(3, 38px); gap: 4px; justify-content: start; }
 .mover button { padding: 6px 0; font-family: var(--mono); }
 .lectura { font: .82rem var(--mono); color: var(--suave); }
@@ -175,6 +179,10 @@ footer { color: var(--suave); font-size: .82rem; }
           <span class="lectura" id="lectura"></span>
           <button type="button" class="chico" id="btnAuto">Acomodar automático</button>
         </div>
+        <div class="campo" id="elementosCaja" hidden><span class="nom">Elementos de la pieza</span>
+          <span class="ayuda">Cómo sigue cada elemento al cambiar de talla. Los números coinciden con los recuadros en la vista.</span>
+          <div class="elementos" id="listaElementos"></div>
+        </div>
         <div class="campo">
           <label for="cuelloLogo">Del cuello al logo</label>
           <div class="unidad"><input type="number" id="cuelloLogo" value="10" min="0" max="40" step="0.5"><span>cm</span></div>
@@ -199,8 +207,18 @@ footer { color: var(--suave); font-size: .82rem; }
         </div>
         <label class="check"><input type="checkbox" id="rotulos" checked> Escribir pieza y talla debajo de cada molde</label>
         <label class="check"><input type="checkbox" id="marcaTalla" checked> Conservar la marca de talla del molde</label>
+        <div class="campo">
+          <label for="escalaLogos">Tamaño de logos y textos por talla</label>
+          <select id="escalaLogos">
+            <option value="0">Igual en todas las tallas</option>
+            <option value="0.3">Ajuste ligero (≈ 9 a 11 cm en un logo de 10)</option>
+            <option value="0.5">Ajuste medio (≈ 9.5 a 12 cm en un logo de 10)</option>
+            <option value="1">Proporcional a la talla</option>
+          </select>
+        </div>
       </div>
     </div>
+    <div id="avisoBase" class="mensaje info" hidden></div>
   </section>
 
   <section class="bloque" aria-labelledby="t3">
@@ -671,6 +689,10 @@ footer { color: var(--suave); font-size: .82rem; }
         const e = els[id];
         if (e.rol === 'fondo') continue;
         e.rol = z && z[3] - e.box[3] < 4 * CM ? 'abajo' : 'arriba';
+        // ancla horizontal: pegado a un costado (y no a los dos)
+        const cIzq = z && e.box[0] - z[0] < 4 * CM, cDer = z && z[2] - e.box[2] < 4 * CM;
+        const angosto = z && (e.box[2] - e.box[0]) < 0.6 * (z[2] - z[0]);
+        e.ah = angosto && cIzq && !cDer ? 'izq' : (angosto && cDer && !cIzq ? 'der' : 'centro');
       }
     }
     // elementos de manga: se separan en dos grupos por el mayor espacio vertical
@@ -704,7 +726,10 @@ footer { color: var(--suave); font-size: .82rem; }
       if (!ids.length || !m) { res[k] = { du: 0, dv: 0 }; continue; }
       const b = cajaDe(an, ids);
       const bw = b[2] - b[0], bh = b[3] - b[1];
-      const du = (m.w - bw) / 2 - b[0];
+      // centrar con el fondo (si existe); si no, con todo el conjunto
+      const fondos = ids.map((i) => an.els[i]).filter((e) => e.rol === 'fondo');
+      const bc = fondos.length ? cajaDe(an, fondos.map((e) => e.id)) : b;
+      const du = (m.w - (bc[2] - bc[0])) / 2 - bc[0];
       let dv;
       if (k === 'frente' || k === 'espalda') {
         const arriba = ids.map((i) => an.els[i]).filter((e) => e.rol === 'arriba');
@@ -736,12 +761,29 @@ footer { color: var(--suave); font-size: .82rem; }
       const off = base[k] || { du: 0, dv: 0 };
       const dx = (s_.w - b.w) / 2;
       let escalaFondo = 1;
+      // referencia: el primer elemento "desde el cuello" se queda a la misma distancia; los demás escalan su separación
+      const arr = ids.map((i) => an.els[i]).filter((e) => e.rol === 'arriba');
+      const topRef = arr.length ? Math.min(...arr.map((e) => e.box[1])) + off.dv : 0;
       for (const id of ids) {
         const e = an.els[id];
         let dy;
-        if (k === 'frente' || k === 'espalda') dy = e.rol === 'abajo' ? s_.h - b.h : s_.cuello - b.cuello;
+        const cuerpo = k === 'frente' || k === 'espalda';
+        if (cuerpo) dy = e.rol === 'abajo' ? s_.h - b.h : s_.cuello - b.cuello;
         else dy = s_.h - b.h; // mangas: misma distancia al dobladillo
         let s = 1, cu = off.du + dx, cv = off.dv + dy;
+        if (e.rol !== 'fondo') {
+          // escala opcional según la talla (logos y textos)
+          const f = op.escalaLogos ? 1 + op.escalaLogos * (s_.w / b.w - 1) : 1;
+          const ah = cuerpo ? (e.ah || 'centro') : 'centro';
+          const av = cuerpo ? (e.rol === 'abajo' ? 'abajo' : 'arriba') : 'abajo';
+          const L = [e.box[0] + off.du, e.box[1] + off.dv, e.box[2] + off.du, e.box[3] + off.dv]; // caja en la talla base
+          // punto de anclaje en la talla base y en la nueva talla
+          const ax = ah === 'izq' ? e.box[0] : ah === 'der' ? e.box[2] : (e.box[0] + e.box[2]) / 2;
+          const nx = ah === 'izq' ? L[0] : ah === 'der' ? L[2] + (s_.w - b.w) : s_.w / 2 + f * ((L[0] + L[2]) / 2 - b.w / 2);
+          const ay = av === 'arriba' ? e.box[1] : e.box[3];
+          const ny = av === 'arriba' ? topRef + (cuerpo ? s_.cuello - b.cuello : 0) + f * (L[1] - topRef) : s_.h - f * (b.h - L[3]);
+          s = f; cu = nx - f * ax; cv = ny - f * ay;
+        }
         if (e.rol === 'fondo') {
           // ¿cubre el molde? si no, ampliar desde la línea del logo
           const L = [e.box[0] + cu, e.box[1] + cv, e.box[2] + cu, e.box[3] + cv];
@@ -955,6 +997,9 @@ footer { color: var(--suave); font-size: .82rem; }
     texto('EJEMPLO', 108.5, 30.5, 2.2, oro);
     texto('Diseño de muestra', 108.5, 33.6, 1.1, blanco);
     flores(84, 133, 62);
+    // elemento pegado al costado izquierdo (sigue la orilla en cada talla)
+    pg.drawEllipse({ x: 82 * CM, y: Y(46, 0), xScale: 7 * CM, yScale: 11 * CM, color: cmyk(0, 0.45, 0.9, 0) });
+    pg.drawEllipse({ x: 82 * CM, y: Y(46, 0), xScale: 4 * CM, yScale: 7 * CM, color: oro });
     // espalda
     pg.drawRectangle({ x: 141 * CM, y: 0, width: 62 * CM, height: H, color: fondo });
     texto('TU EQUIPO', 172, 14, 4, oro);
@@ -1138,7 +1183,7 @@ footer { color: var(--suave); font-size: .82rem; }
     const f = $('fondoManga').value;
     if (f === 'negro') fondo = [0.5, 0.5, 0.5, 1];
     else if (f === 'otro') fondo = ['cC', 'cM', 'cY', 'cK'].map((id) => Math.min(100, Math.max(0, num(id, 0))) / 100);
-    return { cuelloLogo: num('cuelloLogo', 10), margenManga: num('margenManga', 2.8), sangrado: 0.3, fondoManga: fondo, rotulos: $('rotulos').checked, marcaTalla: $('marcaTalla').checked };
+    return { cuelloLogo: num('cuelloLogo', 10), margenManga: num('margenManga', 2.8), sangrado: 0.3, fondoManga: fondo, rotulos: $('rotulos').checked, marcaTalla: $('marcaTalla').checked, escalaLogos: parseFloat($('escalaLogos').value) || 0 };
   }
 
   function cmykCss(c) {
@@ -1187,6 +1232,7 @@ footer { color: var(--suave); font-size: .82rem; }
         throw new Error('No encontré los paneles de frente y espalda (rectángulos de al menos 30 × 40 cm). Si es un .ai, guárdalo en Illustrator con la opción "Crear archivo compatible con PDF" activada, o expórtalo como PDF, y vuelve a subirlo.');
       }
       st.fuente = fuente; st.an = an; st.nombre = nombre; st.ejemplo = esEjemplo;
+      st.tallaBase = tallaSugerida(); $('tallaBase').value = st.tallaBase;
       st.base = A.colocacionBase(an, tallaMolde(st.tallaBase), opciones());
       await renderFuente(bytes);
       limpiarResultados();
@@ -1238,9 +1284,51 @@ footer { color: var(--suave); font-size: .82rem; }
       b.addEventListener('click', () => { st.sel = k; listaPiezas(); dibujar(); });
       c.appendChild(b);
     }
+    listaElementos();
     lectura();
   }
+  function elementosDe(k) { return (k === 'frente' || k === 'espalda') ? st.an.piezas[k].map((i) => st.an.els[i]).filter((e) => e.rol !== 'fondo') : []; }
+  function listaElementos() {
+    const caja = $('elementosCaja'), c = $('listaElementos');
+    const els = st.an ? elementosDe(st.sel) : [];
+    caja.hidden = !els.length; c.innerHTML = '';
+    els.forEach((e, i) => {
+      const row = document.createElement('div'); row.className = 'elemento';
+      const w = cm(e.box[2] - e.box[0]), h = cm(e.box[3] - e.box[1]);
+      row.innerHTML = '<b>' + (i + 1) + '</b>' +
+        '<select aria-label="Horizontal elemento ' + (i + 1) + ' (' + w + ' × ' + h + ' cm)"><option value="centro">Centrado</option><option value="izq">Pegado a la izquierda</option><option value="der">Pegado a la derecha</option></select>' +
+        '<select aria-label="Vertical elemento ' + (i + 1) + '"><option value="arriba">Desde el cuello</option><option value="abajo">Pegado abajo</option></select>';
+      const [sh, sv] = row.querySelectorAll('select');
+      sh.value = e.ah || 'centro'; sv.value = e.rol === 'abajo' ? 'abajo' : 'arriba';
+      sh.title = sv.title = w + ' × ' + h + ' cm';
+      sh.addEventListener('change', () => { e.ah = sh.value; marcarCambio(); dibujar(); });
+      sv.addEventListener('change', () => { e.rol = sv.value; marcarCambio(); dibujar(); });
+      c.appendChild(row);
+    });
+  }
+  function anchoPanel() {
+    if (!st.an) return 0;
+    const f = st.an.piezas.frente.map((i) => st.an.els[i]).filter((e) => e.rol === 'fondo');
+    return f.length ? Math.max(...f.map((e) => e.box[2] - e.box[0])) : 0;
+  }
+  function tallaSugerida() {
+    const w = anchoPanel(); const ts = disponibles();
+    if (!w) return ts.includes('M') ? 'M' : ts[0];
+    let mejor = ts[0];
+    for (const t of ts) if (molde(t).frente.w <= w + 1 * CM) mejor = t;
+    return mejor;
+  }
+  function avisoBase() {
+    const el = $('avisoBase'); const w = anchoPanel();
+    if (!st.an || !w) { el.hidden = true; return; }
+    const m = tallaMolde(st.tallaBase).frente;
+    if (m.w > w + 1 * CM) {
+      el.hidden = false;
+      el.textContent = 'El panel del diseño mide ' + cm(w) + ' cm de ancho y el molde ' + st.tallaBase + ' mide ' + cm(m.w) + ' cm, por eso no lo cubre. Elige aquí la talla para la que se hizo el diseño (sugerida: ' + tallaSugerida() + ') y marca ' + st.tallaBase + ' en la sección 03: al generarla, el fondo se amplía solo.';
+    } else el.hidden = true;
+  }
   function lectura() {
+    avisoBase();
     if (!st.an) return;
     const k = st.sel, m = tallaMolde(st.tallaBase)[k], ids = st.an.piezas[k], off = st.base[k];
     let t = '';
@@ -1297,6 +1385,18 @@ footer { color: var(--suave); font-size: .82rem; }
       }
       ctx.restore();
       ctx.lineWidth = (st.sel === k ? 3 : 1) / z; ctx.strokeStyle = st.sel === k ? acento : '#8f99a3'; ctx.stroke(path);
+      // recuadros numerados de los elementos de la pieza seleccionada
+      if (st.sel === k) {
+        const off = st.base[k];
+        ctx.save(); ctx.setLineDash([4 / z, 3 / z]); ctx.lineWidth = 1.2 / z; ctx.strokeStyle = acento; ctx.fillStyle = acento;
+        ctx.font = '600 ' + (11 / z) + 'px "JetBrains Mono", monospace';
+        elementosDe(k).forEach((e, i) => {
+          const x = e.box[0] + off.du, y = e.box[1] + off.dv;
+          ctx.strokeRect(x, y, e.box[2] - e.box[0], e.box[3] - e.box[1]);
+          ctx.fillText(String(i + 1), x + 3 / z, y + 12 / z);
+        });
+        ctx.restore();
+      }
       // guías
       ctx.setLineDash([6 / z, 4 / z]); ctx.lineWidth = 1.5 / z; ctx.strokeStyle = guia;
       ctx.font = '600 ' + (11 / z) + 'px "JetBrains Mono", monospace'; ctx.fillStyle = guia;
@@ -1375,7 +1475,7 @@ footer { color: var(--suave); font-size: .82rem; }
     $('btnAuto').addEventListener('click', () => { if (!st.an) return; st.base = A.colocacionBase(st.an, tallaMolde(st.tallaBase), opciones()); marcarCambio(); dibujar(); });
     $('btnCambiarCuerpo').addEventListener('click', () => intercambiar('frente', 'espalda'));
     $('btnCambiarMangas').addEventListener('click', () => intercambiar('mangaD', 'mangaI'));
-    for (const id of ['cuelloLogo', 'margenManga', 'rotulos', 'marcaTalla', 'cC', 'cM', 'cY', 'cK']) $(id).addEventListener('input', () => { marcarCambio(); dibujar(); });
+    for (const id of ['cuelloLogo', 'margenManga', 'rotulos', 'marcaTalla', 'escalaLogos', 'cC', 'cM', 'cY', 'cK']) $(id).addEventListener('input', () => { marcarCambio(); dibujar(); });
     $('fondoManga').addEventListener('change', () => { $('cmykCaja').hidden = $('fondoManga').value !== 'otro'; marcarCambio(); dibujar(); });
     $('tallaBase').addEventListener('change', () => { st.tallaBase = $('tallaBase').value; if (st.an) st.base = A.colocacionBase(st.an, tallaMolde(st.tallaBase), opciones()); marcarCambio(); dibujar(); });
     $('modelo').addEventListener('change', () => { st.modelo = $('modelo').value; llenarTallas(); if (st.an) st.base = A.colocacionBase(st.an, tallaMolde(st.tallaBase), opciones()); limpiarResultados(); dibujar(); });
