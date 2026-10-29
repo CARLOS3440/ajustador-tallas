@@ -1,0 +1,1347 @@
+<title>Ajustador de Tallas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Concepto: mesa de corte del taller — una franja de trabajo amplia con la hoja de impresión al centro y controles a los lados. */
+:root {
+  --bg: #e9ecef;
+  --hoja: #ffffff;
+  --panel: #f7f8f9;
+  --tinta: #16191d;
+  --suave: #5b636c;
+  --linea: #cdd3d9;
+  --acento: #0b7f95;
+  --acento-fg: #ffffff;
+  --guia: #e4572e;
+  --ok: #2f7d4a;
+  --aviso: #a3620a;
+  --aviso-bg: #fdf1dc;
+  --error: #b42318;
+  --error-bg: #fde8e6;
+  --display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --texto: "Barlow", "Segoe UI", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111417; --hoja: #1b1f24; --panel: #171b1f; --tinta: #e8ebee; --suave: #9aa3ad; --linea: #2c333b;
+    --acento: #35b4cc; --acento-fg: #071317; --guia: #ff7a52; --ok: #5cc184; --aviso: #f0b45a; --aviso-bg: #2e2416; --error: #ff8a7a; --error-bg: #34191a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111417; --hoja: #1b1f24; --panel: #171b1f; --tinta: #e8ebee; --suave: #9aa3ad; --linea: #2c333b;
+  --acento: #35b4cc; --acento-fg: #071317; --guia: #ff7a52; --ok: #5cc184; --aviso: #f0b45a; --aviso-bg: #2e2416; --error: #ff8a7a; --error-bg: #34191a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--tinta); font-family: var(--texto); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.envoltura { max-width: 1280px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: 2.4rem; letter-spacing: .01em; margin: 0; line-height: 1; text-transform: uppercase; }
+h1 span { color: var(--acento); }
+.sub { color: var(--suave); margin: 4px 0 0; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 1.35rem; text-transform: uppercase; letter-spacing: .03em; margin: 0; display: flex; gap: 10px; align-items: baseline; text-wrap: balance; }
+h2 .paso { font-family: var(--mono); font-size: .8rem; color: var(--acento); font-weight: 500; }
+.bloque { background: var(--panel); border: 1px solid var(--linea); border-radius: 6px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.fila { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.carga { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+@media (max-width: 640px) { .carga { grid-template-columns: 1fr; } }
+.zona {
+  border: 2px dashed var(--linea); border-radius: 6px; padding: 18px; display: flex; gap: 14px; align-items: center; cursor: pointer; background: var(--hoja); min-width: 0;
+}
+.zona.sobre { border-color: var(--acento); }
+.zona strong { display: block; }
+.zona small { color: var(--suave); }
+.icono-archivo { width: 44px; height: 54px; flex: none; border: 2px solid var(--tinta); border-radius: 3px; position: relative; font: 600 11px var(--mono); display: grid; place-items: end center; padding-bottom: 6px; }
+.icono-archivo::before { content: ""; position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; background: var(--panel); border-left: 2px solid var(--tinta); border-bottom: 2px solid var(--tinta); }
+.archivo-nombre { font-family: var(--mono); font-size: .85rem; word-break: break-all; }
+.etiqueta-ej { display: inline-block; background: var(--aviso-bg); color: var(--aviso); font: 500 .75rem var(--mono); padding: 2px 8px; border-radius: 3px; text-transform: uppercase; letter-spacing: .06em; }
+button, .boton {
+  font: 600 .95rem var(--texto); border-radius: 4px; padding: 9px 16px; border: 1px solid var(--linea); background: var(--hoja); color: var(--tinta); cursor: pointer;
+}
+button:hover { border-color: var(--suave); }
+button:focus-visible, input:focus-visible, select:focus-visible, canvas:focus-visible, .zona:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+button.primario { background: var(--acento); color: var(--acento-fg); border-color: var(--acento); }
+button.primario:hover { filter: brightness(1.08); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.chico { padding: 5px 10px; font-size: .85rem; }
+.trabajo { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .trabajo { grid-template-columns: 1fr; } }
+.lienzo-caja { background: var(--hoja); border: 1px solid var(--linea); border-radius: 6px; padding: 10px; min-width: 0; position: relative; }
+#lienzo { width: 100%; display: block; touch-action: none; cursor: grab; border-radius: 3px; }
+#lienzo.arrastrando { cursor: grabbing; }
+.ayuda { color: var(--suave); font-size: .88rem; margin: 0; }
+.controles { display: grid; gap: 14px; }
+.campo { display: grid; gap: 4px; }
+.campo label, .campo .nom { font-weight: 600; font-size: .88rem; }
+.campo input[type=number], .campo select { font: 500 .95rem var(--mono); padding: 7px 9px; border: 1px solid var(--linea); border-radius: 4px; background: var(--hoja); color: var(--tinta); width: 100%; }
+.unidad { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px; }
+.unidad span { font: .85rem var(--mono); color: var(--suave); }
+.cmyk { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.cmyk input { padding: 6px; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: .9rem; }
+.check input { margin-top: 4px; }
+.piezas { display: grid; gap: 6px; font-size: .88rem; }
+.pieza { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 7px 9px; border: 1px solid var(--linea); border-radius: 4px; background: var(--hoja); cursor: pointer; text-align: left; font-weight: 500; }
+.pieza.sel { border-color: var(--acento); box-shadow: inset 3px 0 0 var(--acento); }
+.pieza small { font-family: var(--mono); color: var(--suave); font-size: .78rem; }
+.mover { display: grid; grid-template-columns: repeat(3, 38px); gap: 4px; justify-content: start; }
+.mover button { padding: 6px 0; font-family: var(--mono); }
+.lectura { font: .82rem var(--mono); color: var(--suave); }
+.tallas { display: flex; flex-wrap: wrap; gap: 8px; }
+.talla-op { display: flex; align-items: center; gap: 8px; border: 1px solid var(--linea); border-radius: 4px; padding: 7px 12px; background: var(--hoja); font: 600 1rem var(--display); letter-spacing: .04em; }
+.talla-op small { font: .72rem var(--mono); color: var(--suave); letter-spacing: 0; }
+.talla-op.falta { opacity: .55; }
+.resultados { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 14px; }
+.tarjeta { background: var(--hoja); border: 1px solid var(--linea); border-radius: 6px; padding: 12px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.tarjeta header { align-items: baseline; }
+.tarjeta h3 { margin: 0; font: 700 1.5rem var(--display); letter-spacing: .03em; }
+.tarjeta .medida { font: .8rem var(--mono); color: var(--suave); }
+.tarjeta canvas { width: 100%; height: auto; display: block; background: #fff; border-radius: 3px; border: 1px solid var(--linea); }
+.avisos { display: grid; gap: 4px; }
+.aviso { background: var(--aviso-bg); color: var(--aviso); font-size: .82rem; padding: 5px 8px; border-radius: 3px; }
+.ok { color: var(--ok); font-size: .85rem; }
+.mensaje { padding: 10px 12px; border-radius: 4px; font-size: .92rem; }
+.mensaje.error { background: var(--error-bg); color: var(--error); }
+.mensaje.info { background: var(--aviso-bg); color: var(--aviso); }
+.progreso { font: .85rem var(--mono); color: var(--suave); }
+.reglas { margin: 0; padding-left: 18px; color: var(--suave); font-size: .88rem; display: grid; gap: 2px; }
+footer { color: var(--suave); font-size: .82rem; }
+@media (prefers-reduced-motion: no-preference) { button { transition: filter .15s, border-color .15s; } }
+</style>
+
+<div class="envoltura">
+  <header>
+    <div>
+      <h1>Ajustador <span>de tallas</span></h1>
+      <p class="sub">Adapta un diseño autorizado a los moldes de cada talla, sin cambiar logos, textos ni colores.</p>
+    </div>
+    <div class="fila">
+      <label class="campo" for="modelo"><span class="nom">Modelo</span>
+        <select id="modelo"></select>
+      </label>
+    </div>
+  </header>
+
+  <section class="bloque" aria-labelledby="t1">
+    <h2 id="t1"><span class="paso">01</span>Diseño sin molde</h2>
+    <div class="carga">
+      <div class="zona" id="zona" tabindex="0" role="button" aria-label="Subir diseño en formato AI o PDF">
+        <div class="icono-archivo" aria-hidden="true">AI</div>
+        <div style="min-width:0">
+          <strong>Sube el diseño autorizado (.ai o .pdf)</strong>
+          <small>Arrástralo aquí o haz clic. Los paneles de frente, espalda y los logos de manga, a tamaño real.</small>
+          <div class="fila" style="margin-top:6px"><span class="archivo-nombre" id="nombreArchivo"></span><span class="etiqueta-ej" id="etiquetaEj" hidden>Ejemplo</span></div>
+        </div>
+      </div>
+      <button id="btnEjemplo" type="button">Ver el ejemplo</button>
+    </div>
+    <input type="file" id="archivo" accept=".ai,.pdf,application/pdf,application/illustrator" hidden>
+    <div id="msgCarga" class="mensaje" hidden></div>
+  </section>
+
+  <section class="bloque" aria-labelledby="t2">
+    <h2 id="t2"><span class="paso">02</span>Acomodo en la talla base</h2>
+    <p class="ayuda">Así queda el diseño en el molde de la talla base. Arrastra una pieza para moverla. La línea naranja marca la distancia del cuello al logo en frente y espalda, y el margen mínimo en las mangas. Lo que acomodes aquí se repite en todas las tallas.</p>
+    <div class="trabajo">
+      <div class="lienzo-caja"><canvas id="lienzo" tabindex="0" aria-label="Vista de las piezas en la talla base"></canvas></div>
+      <div class="controles">
+        <div class="campo">
+          <label for="tallaBase">Talla en la que se diseñó</label>
+          <select id="tallaBase"></select>
+        </div>
+        <div class="campo"><span class="nom">Piezas detectadas</span>
+          <div class="piezas" id="listaPiezas"></div>
+          <div class="fila">
+            <button type="button" class="chico" id="btnCambiarCuerpo">Cambiar frente ↔ espalda</button>
+            <button type="button" class="chico" id="btnCambiarMangas">Cambiar mangas</button>
+          </div>
+        </div>
+        <div class="campo"><span class="nom">Mover pieza seleccionada</span>
+          <div class="mover">
+            <span></span><button type="button" data-mv="0,-1" aria-label="Subir">▲</button><span></span>
+            <button type="button" data-mv="-1,0" aria-label="Izquierda">◀</button><button type="button" data-mv="0,0" aria-label="Centrar horizontalmente" title="Centrar">◆</button><button type="button" data-mv="1,0" aria-label="Derecha">▶</button>
+            <span></span><button type="button" data-mv="0,1" aria-label="Bajar">▼</button><span></span>
+          </div>
+          <span class="lectura" id="lectura"></span>
+          <button type="button" class="chico" id="btnAuto">Acomodar automático</button>
+        </div>
+        <div class="campo">
+          <label for="cuelloLogo">Del cuello al logo</label>
+          <div class="unidad"><input type="number" id="cuelloLogo" value="10" min="0" max="40" step="0.5"><span>cm</span></div>
+        </div>
+        <div class="campo">
+          <label for="margenManga">Margen mínimo en mangas</label>
+          <div class="unidad"><input type="number" id="margenManga" value="2.8" min="0" max="15" step="0.1"><span>cm</span></div>
+        </div>
+        <div class="campo">
+          <label for="fondoManga">Fondo de las mangas</label>
+          <select id="fondoManga">
+            <option value="negro">Negro enriquecido (C50 M50 Y50 K100)</option>
+            <option value="ninguno">Sin fondo (blanco)</option>
+            <option value="otro">Otro color CMYK…</option>
+          </select>
+          <div class="cmyk" id="cmykCaja" hidden>
+            <input type="number" id="cC" min="0" max="100" value="0" aria-label="Cian %">
+            <input type="number" id="cM" min="0" max="100" value="0" aria-label="Magenta %">
+            <input type="number" id="cY" min="0" max="100" value="0" aria-label="Amarillo %">
+            <input type="number" id="cK" min="0" max="100" value="100" aria-label="Negro %">
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="rotulos" checked> Escribir pieza y talla debajo de cada molde</label>
+        <label class="check"><input type="checkbox" id="marcaTalla" checked> Conservar la marca de talla del molde</label>
+      </div>
+    </div>
+  </section>
+
+  <section class="bloque" aria-labelledby="t3">
+    <h2 id="t3"><span class="paso">03</span>Generar tallas</h2>
+    <ul class="reglas">
+      <li>Logos y textos conservan su tamaño y su distancia al cuello.</li>
+      <li>Lo que está pegado abajo sigue pegado al borde inferior.</li>
+      <li>El fondo solo se amplía si no alcanza a cubrir el molde; te avisa cuánto.</li>
+    </ul>
+    <div class="tallas" id="tallas"></div>
+    <div class="fila">
+      <button type="button" class="primario" id="btnGenerar">Generar PDF por talla</button>
+      <button type="button" id="btnZip" disabled>Descargar todas (ZIP)</button>
+      <span class="progreso" id="progreso"></span>
+    </div>
+    <div id="msgGen" class="mensaje" hidden></div>
+    <div class="resultados" id="resultados"></div>
+  </section>
+
+  <footer>Todo se procesa en esta computadora; el diseño no se sube a ningún servidor. Cada PDF se abre en Illustrator o se manda directo a impresión.</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>/* Motor de adaptación de tallas.
+   Lee el contenido de una página PDF / AI, lo separa en fragmentos con su
+   caja (bbox) y permite volver a emitirlos recolocados y recortados con un molde.
+   Funciona en navegador (window.Motor) y en Node (module.exports). */
+(function (global) {
+  'use strict';
+
+  // ---------- Tokenizador de content streams ----------
+  const WS = new Set([0x00, 0x09, 0x0a, 0x0c, 0x0d, 0x20]);
+  const DELIM = new Set([0x28, 0x29, 0x3c, 0x3e, 0x5b, 0x5d, 0x7b, 0x7d, 0x2f, 0x25]);
+
+  // Devuelve lista de operaciones {op, args:[tokens], s, e} (s/e = posiciones en el texto)
+  function tokenize(str) {
+    const ops = [];
+    let args = [];
+    let opStart = -1;
+    let i = 0;
+    const n = str.length;
+    const code = (k) => str.charCodeAt(k);
+    while (i < n) {
+      const c = code(i);
+      if (WS.has(c)) { i++; continue; }
+      if (c === 0x25) { // comentario
+        while (i < n && code(i) !== 0x0a && code(i) !== 0x0d) i++;
+        continue;
+      }
+      const tStart = i;
+      let tok;
+      if (c === 0x28) { // (string)
+        let depth = 0;
+        while (i < n) {
+          const ch = code(i);
+          if (ch === 0x5c) { i += 2; continue; }
+          if (ch === 0x28) depth++;
+          else if (ch === 0x29) { depth--; if (depth === 0) { i++; break; } }
+          i++;
+        }
+        tok = { t: 'str', v: str.slice(tStart, i) };
+      } else if (c === 0x3c && code(i + 1) === 0x3c) { // << dict >>
+        let depth = 0;
+        while (i < n) {
+          if (code(i) === 0x3c && code(i + 1) === 0x3c) { depth++; i += 2; continue; }
+          if (code(i) === 0x3e && code(i + 1) === 0x3e) { depth--; i += 2; if (depth === 0) break; continue; }
+          if (code(i) === 0x28) { // string dentro de dict
+            let d = 0;
+            while (i < n) { const ch = code(i); if (ch === 0x5c) { i += 2; continue; } if (ch === 0x28) d++; else if (ch === 0x29) { d--; if (d === 0) { i++; break; } } i++; }
+            continue;
+          }
+          i++;
+        }
+        tok = { t: 'dict', v: str.slice(tStart, i) };
+      } else if (c === 0x3c) { // <hex>
+        while (i < n && code(i) !== 0x3e) i++;
+        i++;
+        tok = { t: 'hex', v: str.slice(tStart, i) };
+      } else if (c === 0x5b) { // [ array ]
+        let depth = 0;
+        while (i < n) {
+          const ch = code(i);
+          if (ch === 0x28) { let d = 0; while (i < n) { const x = code(i); if (x === 0x5c) { i += 2; continue; } if (x === 0x28) d++; else if (x === 0x29) { d--; if (d === 0) { i++; break; } } i++; } continue; }
+          if (ch === 0x5b) depth++;
+          else if (ch === 0x5d) { depth--; if (depth === 0) { i++; break; } }
+          i++;
+        }
+        tok = { t: 'arr', v: str.slice(tStart, i) };
+      } else if (c === 0x2f) { // /Name
+        i++;
+        while (i < n && !WS.has(code(i)) && !DELIM.has(code(i))) i++;
+        tok = { t: 'name', v: str.slice(tStart, i) };
+      } else {
+        while (i < n && !WS.has(code(i)) && !DELIM.has(code(i))) i++;
+        if (i === tStart) { i++; continue; } // carácter suelto inesperado
+        const w = str.slice(tStart, i);
+        if (/^[+-]?(\d+\.?\d*|\.\d+)$/.test(w)) tok = { t: 'num', v: parseFloat(w) };
+        else if (w === 'true' || w === 'false' || w === 'null') tok = { t: 'kw', v: w };
+        else {
+          // operador
+          if (opStart < 0) opStart = tStart;
+          const op = { op: w, args, s: opStart, e: i };
+          if (w === 'BI') { // imagen en línea: saltar hasta EI
+            const m = str.indexOf('ID', i);
+            let k = m + 3;
+            let found = -1;
+            while (k < n) {
+              const p = str.indexOf('EI', k);
+              if (p < 0) break;
+              const before = code(p - 1), after = code(p + 2);
+              if (WS.has(before) && (p + 2 >= n || WS.has(after))) { found = p; break; }
+              k = p + 2;
+            }
+            i = found < 0 ? n : found + 2;
+            op.op = 'INLINE_IMAGE';
+            op.e = i;
+          }
+          ops.push(op);
+          args = [];
+          opStart = -1;
+          continue;
+        }
+      }
+      if (opStart < 0) opStart = tStart;
+      args.push(tok);
+    }
+    return ops;
+  }
+
+  // ---------- Geometría ----------
+  const I = [1, 0, 0, 1, 0, 0];
+  function mul(m, n) { // m luego n  (vector fila: p * m * n)
+    return [
+      m[0] * n[0] + m[1] * n[2], m[0] * n[1] + m[1] * n[3],
+      m[2] * n[0] + m[3] * n[2], m[2] * n[1] + m[3] * n[3],
+      m[4] * n[0] + m[5] * n[2] + n[4], m[4] * n[1] + m[5] * n[3] + n[5]
+    ];
+  }
+  function tp(m, x, y) { return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]; }
+  function emptyBox() { return [Infinity, Infinity, -Infinity, -Infinity]; }
+  function addPt(b, p) { if (p[0] < b[0]) b[0] = p[0]; if (p[1] < b[1]) b[1] = p[1]; if (p[0] > b[2]) b[2] = p[0]; if (p[1] > b[3]) b[3] = p[1]; }
+  function isEmpty(b) { return !(b[0] <= b[2] && b[1] <= b[3]); }
+  function inter(a, b) { if (!b) return a.slice(); if (!a) return b.slice(); return [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])]; }
+  function union(a, b) { if (!a || isEmpty(a)) return b ? b.slice() : a; if (!b || isEmpty(b)) return a.slice(); return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]; }
+  function boxOfRectT(m, x0, y0, x1, y1) { const b = emptyBox(); addPt(b, tp(m, x0, y0)); addPt(b, tp(m, x1, y0)); addPt(b, tp(m, x0, y1)); addPt(b, tp(m, x1, y1)); return b; }
+  function area(b) { return isEmpty(b) ? 0 : (b[2] - b[0]) * (b[3] - b[1]); }
+
+  const PATH_OPS = new Set(['m', 'l', 'c', 'v', 'y', 'h', 're']);
+  const PAINT_OPS = new Set(['f', 'F', 'f*', 'S', 's', 'B', 'B*', 'b', 'b*', 'n']);
+  const MARK_OPS = new Set(['BDC', 'BMC', 'EMC', 'MP', 'DP']);
+
+  /* Calcula la caja pintada de un rango de operaciones.
+     ctx: {xobjects: nombre -> {type:'image'|'form', bbox, matrix}} */
+  function measure(ops, startCTM, startClip, ctx) {
+    let ctm = startCTM.slice();
+    let clip = startClip ? startClip.slice() : null;
+    const stack = [];
+    let path = emptyBox();
+    let pendingClip = false;
+    let box = emptyBox();
+    let lw = 1;
+    let textMode = false;
+    let tm = I.slice(), tlm = I.slice(), fs = 12, tl = 0, th = 1;
+    const paint = (b) => { const r = inter(b, clip); if (!isEmpty(r)) box = union(box, r); };
+    for (const o of ops) {
+      const a = o.args;
+      const num = (k) => (a[k] && a[k].t === 'num' ? a[k].v : 0);
+      switch (o.op) {
+        case 'q': stack.push([ctm, clip, lw]); break;
+        case 'Q': if (stack.length) { const s = stack.pop(); ctm = s[0]; clip = s[1]; lw = s[2]; } break;
+        case 'cm': ctm = mul([num(0), num(1), num(2), num(3), num(4), num(5)], ctm); break;
+        case 'w': lw = num(0); break;
+        case 'm': case 'l': addPt(path, tp(ctm, num(0), num(1))); break;
+        case 'c': addPt(path, tp(ctm, num(0), num(1))); addPt(path, tp(ctm, num(2), num(3))); addPt(path, tp(ctm, num(4), num(5))); break;
+        case 'v': case 'y': addPt(path, tp(ctm, num(0), num(1))); addPt(path, tp(ctm, num(2), num(3))); break;
+        case 're': { const x = num(0), y = num(1), w = num(2), h = num(3); const b = boxOfRectT(ctm, x, y, x + w, y + h); path = union(path, b); break; }
+        case 'W': case 'W*': pendingClip = true; break;
+        case 'BT': textMode = true; tm = I.slice(); tlm = I.slice(); break;
+        case 'ET': textMode = false; break;
+        case 'Tf': fs = num(1) || fs; break;
+        case 'TL': tl = num(0); break;
+        case 'Tz': th = (num(0) || 100) / 100; break;
+        case 'Tm': tm = [num(0), num(1), num(2), num(3), num(4), num(5)]; tlm = tm.slice(); break;
+        case 'Td': case 'TD': tlm = mul([1, 0, 0, 1, num(0), num(1)], tlm); tm = tlm.slice(); if (o.op === 'TD') tl = -num(1); break;
+        case 'T*': tlm = mul([1, 0, 0, 1, 0, -tl], tlm); tm = tlm.slice(); break;
+        case 'Tj': case 'TJ': case "'": case '"': {
+          // texto sin convertir a curvas: caja aproximada a partir del tamaño de letra
+          if (o.op === "'" || o.op === '"') { tlm = mul([1, 0, 0, 1, 0, -tl], tlm); tm = tlm.slice(); }
+          let len = 0;
+          for (const t of a) {
+            if (t.t === 'str') len += t.v.length - 2;
+            else if (t.t === 'hex') len += (t.v.length - 2) / 2;
+            else if (t.t === 'arr') len += (t.v.match(/\((?:\\.|[^\\)])*\)/g) || []).reduce((s, x) => s + x.length - 2, 0) + ((t.v.match(/<[0-9a-fA-F\s]*>/g) || []).reduce((s, x) => s + (x.length - 2) / 2, 0));
+          }
+          const w = len * fs * 0.6 * th;
+          const m2 = mul(tm, ctm);
+          paint(boxOfRectT(m2, 0, -0.25 * fs, w, fs));
+          tm = mul([1, 0, 0, 1, w, 0], tm);
+          break;
+        }
+        case 'sh': if (clip) paint(clip); break;
+        case 'INLINE_IMAGE': paint(boxOfRectT(ctm, 0, 0, 1, 1)); break;
+        case 'Do': {
+          const nm = a[0] && a[0].v ? a[0].v.slice(1) : '';
+          const xo = ctx.xobjects[nm];
+          if (xo && xo.type === 'form' && xo.bbox) {
+            const m2 = mul(xo.matrix || I, ctm);
+            paint(boxOfRectT(m2, xo.bbox[0], xo.bbox[1], xo.bbox[2], xo.bbox[3]));
+          } else paint(boxOfRectT(ctm, 0, 0, 1, 1));
+          break;
+        }
+        default:
+          if (PAINT_OPS.has(o.op)) {
+            if (!isEmpty(path)) {
+              if (o.op !== 'n') {
+                const stroke = /^[SsBb]/.test(o.op);
+                let b = path.slice();
+                if (stroke) { const sc = Math.sqrt(Math.abs(ctm[0] * ctm[3] - ctm[1] * ctm[2])) || 1; const p = lw * sc / 2; b = [b[0] - p, b[1] - p, b[2] + p, b[3] + p]; }
+                paint(b);
+              }
+              if (pendingClip) clip = inter(clip, path);
+            }
+            pendingClip = false;
+            path = emptyBox();
+          }
+      }
+    }
+    return { box, ctm, clip };
+  }
+
+  /* Divide la página en fragmentos dibujables, en orden.
+     Cada fragmento: {prefix: [ops de estado heredados], ops: [ops propios], box} */
+  function fragment(content, pageBox, ctx, hiddenOC) {
+    const ops0 = tokenize(content);
+    // quitar marcado y contenido de capas ocultas
+    const ops = [];
+    const mcStack = [];
+    let hidden = 0;
+    for (const o of ops0) {
+      if (o.op === 'BDC' || o.op === 'BMC') {
+        let hid = false;
+        if (o.op === 'BDC' && o.args[0] && o.args[0].v === '/OC' && o.args[1] && hiddenOC && hiddenOC.has(o.args[1].v.slice(1))) hid = true;
+        mcStack.push(hid); if (hid) hidden++;
+        continue;
+      }
+      if (o.op === 'EMC') { const h = mcStack.pop(); if (h) hidden--; continue; }
+      if (o.op === 'MP' || o.op === 'DP') continue;
+      if (hidden > 0) continue;
+      ops.push(o);
+    }
+    const pageArea = area(pageBox);
+    const frags = [];
+
+    // Busca el final de un bloque q..Q que comienza en i (devuelve índice del Q)
+    function blockEnd(list, i) {
+      let d = 0;
+      for (let k = i; k < list.length; k++) {
+        if (list[k].op === 'q') d++;
+        else if (list[k].op === 'Q') { d--; if (d === 0) return k; }
+      }
+      return list.length - 1;
+    }
+
+    // Procesa un nivel. prefix: ops de estado heredados (sin recortes de página)
+    function level(list, prefix, ctm, depth) {
+      let state = prefix.slice();
+      let curCTM = ctm.slice();
+      let i = 0;
+      let loose = [];
+      const flushLoose = () => {
+        if (!loose.length) return;
+        const m = measure(state.concat(loose), I, null, ctx);
+        frags.push({ prefix: state.slice(), ops: loose, box: m.box });
+        loose = [];
+      };
+      while (i < list.length) {
+        const o = list[i];
+        if (o.op === 'q') {
+          flushLoose();
+          let j = blockEnd(list, i);
+          // caso especial: la trayectoria se arma dentro de q..Q y se pinta después del Q
+          if (list[j + 1] && (PAINT_OPS.has(list[j + 1].op) || list[j + 1].op === 'W' || list[j + 1].op === 'W*')) {
+            let e = j + 1;
+            while (e < list.length && !PAINT_OPS.has(list[e].op)) e++;
+            const blk = list.slice(i, e + 1);
+            const m = measure(state.concat(blk), I, null, ctx);
+            frags.push({ prefix: state.slice(), ops: blk, box: m.box });
+            i = e + 1;
+            continue;
+          }
+          const inner = list.slice(i + 1, j);
+          // ¿Comienza con un recorte del tamaño de toda la página (o no recorta)?
+          let k = 0; let clipOps = []; let pagewide = false; let panelClip = false;
+          const pre = [];
+          // leer recorte inicial: ops de trayectoria + W n
+          while (k < inner.length && (PATH_OPS.has(inner[k].op))) { pre.push(inner[k]); k++; }
+          if (pre.length && inner[k] && (inner[k].op === 'W' || inner[k].op === 'W*') && inner[k + 1] && inner[k + 1].op === 'n') {
+            clipOps = pre.concat([inner[k], inner[k + 1]]);
+            const mb = measure(state.concat(pre, [{ op: 'n', args: [] }]), I, null, ctx);
+            // área del trazo de recorte
+            let pb = emptyBox();
+            const mm = measure(state, I, null, ctx);
+            const cm2 = mm.ctm;
+            for (const p of pre) {
+              const a = p.args; const nv = (x) => (a[x] ? a[x].v : 0);
+              if (p.op === 're') pb = union(pb, boxOfRectT(cm2, nv(0), nv(1), nv(0) + nv(2), nv(1) + nv(3)));
+              else if (p.op === 'm' || p.op === 'l') addPt(pb, tp(cm2, nv(0), nv(1)));
+            }
+            pagewide = area(pb) >= pageArea * 0.9;
+            // recorte del tamaño de un panel (al menos 30 x 40 cm): se puede descender conservándolo
+            const CMp = 72 / 2.54;
+            panelClip = !pagewide && (pb[2] - pb[0]) >= 30 * CMp && (pb[3] - pb[1]) >= 40 * CMp;
+            k += 2;
+            void mb;
+          } else { k = 0; }
+          const rest = inner.slice(k);
+          const hasChildren = rest.some((x) => x.op === 'q' || PAINT_OPS.has(x.op) || x.op === 'Do');
+          if ((pagewide || panelClip || (!clipOps.length && depth < 8)) && hasChildren && rest.length > 1 && depth < 8) {
+            // descender: el contenido se divide en hijos
+            level(rest, panelClip ? state.concat(clipOps) : state, curCTM, depth + 1);
+          } else {
+            const blk = list.slice(i, j + 1);
+            const m = measure(state.concat(blk), I, null, ctx);
+            frags.push({ prefix: state.slice(), ops: blk, box: m.box });
+          }
+          i = j + 1;
+          continue;
+        }
+        if (o.op === 'Q') { i++; continue; } // desbalanceado
+        if (PATH_OPS.has(o.op) || PAINT_OPS.has(o.op) || o.op === 'W' || o.op === 'W*') {
+          loose.push(o);
+          if (PAINT_OPS.has(o.op)) flushLoose();
+          i++; continue;
+        }
+        if (o.op === 'BT') {
+          flushLoose();
+          let j = i; while (j < list.length && list[j].op !== 'ET') j++;
+          const blk = list.slice(i, j + 1);
+          const m = measure(state.concat(blk), I, null, ctx);
+          frags.push({ prefix: state.slice(), ops: blk, box: m.box });
+          i = j + 1; continue;
+        }
+        if (o.op === 'Do' || o.op === 'sh' || o.op === 'INLINE_IMAGE') {
+          flushLoose();
+          const m = measure(state.concat([o]), I, null, ctx);
+          frags.push({ prefix: state.slice(), ops: [o], box: m.box });
+          i++; continue;
+        }
+        // operador de estado (color, gs, cm, grosor...)
+        flushLoose();
+        if (o.op === 'cm') { const a = o.args.map((x) => x.v); curCTM = mul(a, curCTM); }
+        state.push(o);
+        i++;
+      }
+      flushLoose();
+    }
+    level(ops, [], I, 0);
+    return frags.filter((f) => !isEmpty(f.box));
+  }
+
+  function emitOps(content, list) {
+    // re-emite el texto original de cada operación
+    let out = '';
+    for (const o of list) out += content.slice(o.s, o.e) + '\n';
+    return out;
+  }
+
+  // ---------- Agrupar fragmentos en elementos ----------
+  function groupElements(frags, gap) {
+    const n = frags.length;
+    const parent = frags.map((_, i) => i);
+    const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+    const idx = frags.map((f, i) => i).sort((a, b) => frags[a].box[0] - frags[b].box[0]);
+    for (let a = 0; a < n; a++) {
+      const A = frags[idx[a]].box;
+      for (let b = a + 1; b < n; b++) {
+        const B = frags[idx[b]].box;
+        if (B[0] > A[2] + gap) break;
+        if (B[1] <= A[3] + gap && B[3] >= A[1] - gap) parent[find(idx[a])] = find(idx[b]);
+      }
+    }
+    const groups = new Map();
+    frags.forEach((f, i) => { const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(i); });
+    return [...groups.values()].map((list) => ({ frags: list, box: list.reduce((b, i) => union(b, frags[i].box), emptyBox()) }));
+  }
+
+  // ---------- Trayectorias de molde ----------
+  // Convierte una trayectoria SVG simple (M L C Z, absolutas) en ops PDF con una matriz
+  function svgPathToPdf(d, m) {
+    const t = d.match(/[MLCZ]|-?\d*\.?\d+(?:e[-+]?\d+)?/gi) || [];
+    let out = ''; let k = 0; let cmd = '';
+    const f = (x) => (Math.round(x * 1000) / 1000).toString();
+    const P = () => { const x = parseFloat(t[k++]); const y = parseFloat(t[k++]); const p = tp(m, x, y); return f(p[0]) + ' ' + f(p[1]); };
+    while (k < t.length) {
+      if (/^[MLCZ]$/i.test(t[k])) cmd = t[k++].toUpperCase();
+      if (cmd === 'M') { out += P() + ' m\n'; cmd = 'L'; }
+      else if (cmd === 'L') out += P() + ' l\n';
+      else if (cmd === 'C') out += P() + ' ' + P() + ' ' + P() + ' c\n';
+      else if (cmd === 'Z') { out += 'h\n'; cmd = ''; }
+      else k++;
+    }
+    return out;
+  }
+
+  const api = { tokenize, measure, fragment, emitOps, groupElements, svgPathToPdf, mul, tp, union, inter, area, isEmpty, emptyBox, I };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else global.Motor = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* Lógica de colocación por talla. Depende de Motor (motor.js). */
+(function (global) {
+  'use strict';
+  const Motor = global.Motor || (typeof require !== 'undefined' ? require('./motor.js') : null);
+  const CM = 72 / 2.54; // puntos por centímetro
+  const PIEZAS = ['mangaD', 'mangaI', 'frente', 'espalda'];
+  const NOMBRES = { frente: 'FRENTE', espalda: 'ESPALDA', mangaD: 'MANGA DERECHA', mangaI: 'MANGA IZQUIERDA' };
+
+  /* Analiza los fragmentos de la página y decide a qué pieza pertenece cada elemento.
+     Coordenadas td: x igual, y medida desde arriba de la página (hacia abajo). */
+  function analizar(frags, pageH) {
+    // 1) fragmentos de fondo (al menos 30 x 40 cm) se agrupan aparte, para que los logos encima no se mezclen con ellos
+    const esFondo = (f) => (f.box[2] - f.box[0]) >= 30 * CM && (f.box[3] - f.box[1]) >= 40 * CM;
+    const idxF = [], idxO = [];
+    frags.forEach((f, i) => (esFondo(f) ? idxF : idxO).push(i));
+    const sub = (idx, gap) => Motor.groupElements(idx.map((i) => frags[i]), gap).map((g) => ({ frags: g.frags.map((j) => idx[j]), box: g.box }));
+    const gF = sub(idxF, 0).map((g) => Object.assign(g, { fondo: true }));
+    const gO = sub(idxO, 0.3 * CM);
+    const els = gF.concat(gO).map((g, i) => {
+      const b = g.box;
+      return { id: i, frags: g.frags.sort((a, c) => a - c), box: [b[0], pageH - b[3], b[2], pageH - b[1]], esFondo: !!g.fondo };
+    });
+    const W = (e) => e.box[2] - e.box[0];
+    const H = (e) => e.box[3] - e.box[1];
+    let fondos = els.filter((e) => e.esFondo).sort((a, b) => W(b) * H(b) - W(a) * H(a)).slice(0, 2);
+    fondos.sort((a, b) => a.box[0] - b.box[0]);
+    const piezas = { frente: [], espalda: [], mangaD: [], mangaI: [] };
+    const zonas = {};
+    if (fondos[0]) { zonas.frente = fondos[0].box.slice(); fondos[0].rol = 'fondo'; }
+    if (fondos[1]) { zonas.espalda = fondos[1].box.slice(); fondos[1].rol = 'fondo'; }
+    const dentro = (e, z) => { const cx = (e.box[0] + e.box[2]) / 2, cy = (e.box[1] + e.box[3]) / 2; return z && cx >= z[0] && cx <= z[2] && cy >= z[1] && cy <= z[3]; };
+    const sueltos = [];
+    for (const e of els) {
+      if (e.rol === 'fondo') { piezas[e === fondos[0] ? 'frente' : 'espalda'].push(e.id); continue; }
+      if (dentro(e, zonas.frente)) piezas.frente.push(e.id);
+      else if (dentro(e, zonas.espalda)) piezas.espalda.push(e.id);
+      else sueltos.push(e);
+    }
+    // elementos de cuerpo: los que tocan la parte de abajo se anclan abajo
+    for (const k of ['frente', 'espalda']) {
+      const z = zonas[k];
+      for (const id of piezas[k]) {
+        const e = els[id];
+        if (e.rol === 'fondo') continue;
+        e.rol = z && z[3] - e.box[3] < 4 * CM ? 'abajo' : 'arriba';
+      }
+    }
+    // elementos de manga: se separan en dos grupos por el mayor espacio vertical
+    sueltos.sort((a, b) => (a.box[1] + a.box[3]) - (b.box[1] + b.box[3]));
+    let corte = sueltos.length;
+    if (sueltos.length > 1) {
+      let mejor = -Infinity;
+      for (let i = 1; i < sueltos.length; i++) {
+        const top = Math.max(...sueltos.slice(0, i).map((e) => e.box[3]));
+        const gap = sueltos[i].box[1] - top;
+        if (gap > mejor) { mejor = gap; corte = i; }
+      }
+      if (mejor < 2 * CM) corte = sueltos.length; // todo es un solo diseño
+    }
+    sueltos.forEach((e, i) => { e.rol = 'manga'; (i < corte ? piezas.mangaD : piezas.mangaI).push(e.id); });
+    return { els, piezas, zonas };
+  }
+
+  function cajaDe(an, ids) {
+    let b = null;
+    for (const id of ids) { const e = an.els[id].box; b = b ? [Math.min(b[0], e[0]), Math.min(b[1], e[1]), Math.max(b[2], e[2]), Math.max(b[3], e[3])] : e.slice(); }
+    return b;
+  }
+
+  /* Colocación automática en la talla base: devuelve {pieza: {du, dv}} (desplazamiento td -> local del molde). */
+  function colocacionBase(an, molde, op) {
+    const res = {};
+    for (const k of PIEZAS) {
+      const ids = an.piezas[k];
+      const m = molde[k];
+      if (!ids.length || !m) { res[k] = { du: 0, dv: 0 }; continue; }
+      const b = cajaDe(an, ids);
+      const bw = b[2] - b[0], bh = b[3] - b[1];
+      const du = (m.w - bw) / 2 - b[0];
+      let dv;
+      if (k === 'frente' || k === 'espalda') {
+        const arriba = ids.map((i) => an.els[i]).filter((e) => e.rol === 'arriba');
+        if (arriba.length) {
+          const top = Math.min(...arriba.map((e) => e.box[1]));
+          dv = m.cuello + op.cuelloLogo * CM - top; // primer elemento a X cm del cuello
+        } else {
+          dv = (m.h - bh) / 2 - b[1]; // diseño aplanado: centrado, se ajusta a mano
+        }
+      } else {
+        dv = (m.h - bh) / 2 - b[1];
+        const minDv = m.h - op.margenManga * CM - b[3];
+        if (dv > minDv) dv = minDv;
+      }
+      res[k] = { du, dv };
+    }
+    return res;
+  }
+
+  /* Calcula la transformación de cada elemento para una talla.
+     Devuelve {pieza: [{id, s, cu, cv}]} donde local = s*td + (cu, cv) */
+  function transformar(an, base, mb, ms, op) {
+    const out = {}; const avisos = [];
+    for (const k of PIEZAS) {
+      const ids = an.piezas[k];
+      out[k] = [];
+      const b = mb[k], s_ = ms[k];
+      if (!b || !s_) continue;
+      const off = base[k] || { du: 0, dv: 0 };
+      const dx = (s_.w - b.w) / 2;
+      let escalaFondo = 1;
+      for (const id of ids) {
+        const e = an.els[id];
+        let dy;
+        if (k === 'frente' || k === 'espalda') dy = e.rol === 'abajo' ? s_.h - b.h : s_.cuello - b.cuello;
+        else dy = s_.h - b.h; // mangas: misma distancia al dobladillo
+        let s = 1, cu = off.du + dx, cv = off.dv + dy;
+        if (e.rol === 'fondo') {
+          // ¿cubre el molde? si no, ampliar desde la línea del logo
+          const L = [e.box[0] + cu, e.box[1] + cv, e.box[2] + cu, e.box[3] + cv];
+          const sangr = op.sangrado * CM;
+          const O = [s_.w / 2, (s_.cuello || 0) + op.cuelloLogo * CM];
+          const need = [O[0] - (0 - sangr), O[1] - (0 - sangr), (s_.w + sangr) - O[0], (s_.h + sangr) - O[1]];
+          const have = [O[0] - L[0], O[1] - L[1], L[2] - O[0], L[3] - O[1]];
+          for (let i = 0; i < 4; i++) { if (have[i] > 0) s = Math.max(s, need[i] / have[i]); }
+          if (s > 1.0005) {
+            // local = s*(td + c - O) + O
+            cu = s * cu + (1 - s) * O[0];
+            cv = s * cv + (1 - s) * O[1];
+            escalaFondo = s;
+          } else s = 1;
+        }
+        out[k].push({ id, s, cu, cv });
+      }
+      if (escalaFondo > 1.0005) avisos.push(NOMBRES[k] + ': el fondo se amplió ' + Math.round((escalaFondo - 1) * 100) + '% para cubrir el molde');
+      // revisar margen de mangas
+      if ((k === 'mangaD' || k === 'mangaI') && out[k].length) {
+        const bot = Math.max(...out[k].map((t) => an.els[t.id].box[3] + t.cv));
+        if (s_.h - bot < op.margenManga * CM - 0.5) avisos.push(NOMBRES[k] + ': el diseño queda a menos de ' + op.margenManga + ' cm del borde');
+      }
+    }
+    return { trans: out, avisos };
+  }
+
+  /* Distribución de piezas en la hoja: devuelve {ancho, alto, pos:{pieza:{x,y}}} (pt, y hacia abajo) */
+  function distribuir(ms, op) {
+    const mg = 2 * CM, sep = 3 * CM, et = op.rotulos ? 1.6 * CM : 0;
+    const mw = Math.max(ms.mangaD.w, ms.mangaI.w);
+    const pos = {};
+    pos.mangaD = { x: mg + (mw - ms.mangaD.w) / 2, y: mg };
+    pos.mangaI = { x: mg + (mw - ms.mangaI.w) / 2, y: mg + ms.mangaD.h + et + sep };
+    const colH = ms.mangaD.h + ms.mangaI.h + et * 2 + sep;
+    pos.frente = { x: mg + mw + sep, y: mg };
+    pos.espalda = { x: pos.frente.x + ms.frente.w + sep, y: mg };
+    const ancho = pos.espalda.x + ms.espalda.w + mg;
+    const alto = mg + Math.max(colH, ms.frente.h + et, ms.espalda.h + et) + mg;
+    return { ancho, alto, pos };
+  }
+
+  function f3(v) { return (Math.round(v * 1000) / 1000).toString(); }
+
+  /* Construye el texto del content stream para una talla */
+  function contenido(content, frags, an, t, ms, dist, op, pageH) {
+    let s = '';
+    const H = dist.alto;
+    for (const k of PIEZAS) {
+      const m = ms[k]; const p = dist.pos[k];
+      if (!m) continue;
+      const mat = [1, 0, 0, -1, p.x, H - p.y];
+      const ruta = Motor.svgPathToPdf(m.d, mat);
+      s += 'q\n';
+      if ((k === 'mangaD' || k === 'mangaI') && op.fondoManga) s += op.fondoManga.join(' ') + ' k\n' + ruta + 'f\n';
+      s += ruta + 'W n\n';
+      for (const tr of t[k]) {
+        const e = an.els[tr.id];
+        // local = s*td + c ; td.y = pageH - y ; salida Y = H - (p.y + local.v)
+        const a = tr.s, e1 = p.x + tr.cu, f1 = H - p.y - tr.cv - a * pageH;
+        s += 'q\n' + [a, 0, 0, a, e1, f1].map(f3).join(' ') + ' cm\n';
+        for (const fi of e.frags) {
+          const fr = frags[fi];
+          s += 'q\n' + Motor.emitOps(content, fr.prefix) + Motor.emitOps(content, fr.ops) + 'Q\n';
+        }
+        s += 'Q\n';
+      }
+      s += 'Q\n';
+      if (m.etiqueta && op.marcaTalla) s += 'q\n0 0 0 0 k\n' + Motor.svgPathToPdf(m.etiqueta, mat) + 'f*\nQ\n';
+    }
+    return s;
+  }
+
+  const api = { CM, PIEZAS, NOMBRES, analizar, colocacionBase, transformar, distribuir, contenido, cajaDe };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else global.Adaptador = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* Lectura del archivo de diseño y creación de los PDF por talla (usa pdf-lib). */
+(function (global) {
+  'use strict';
+  const isNode = typeof module !== 'undefined' && module.exports;
+  const L = global.PDFLib || (isNode ? require('pdf-lib') : null);
+  const Motor = global.Motor || (isNode ? require('./motor.js') : null);
+  const A = global.Adaptador || (isNode ? require('./adaptador.js') : null);
+  const { PDFDocument, PDFName, PDFArray, PDFDict, PDFNumber, StandardFonts, rgb, cmyk, decodePDFRawStream } = L;
+
+  function bytesToLatin1(bytes) {
+    let s = '';
+    const CH = 0x8000;
+    for (let i = 0; i < bytes.length; i += CH) s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+    return s;
+  }
+  function latin1ToBytes(s) { const b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i) & 0xff; return b; }
+
+  async function leer(bytes) {
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false, throwOnInvalidObject: false });
+    const page = doc.getPage(0);
+    const node = page.node;
+    const ctx = doc.context;
+    const contents = node.Contents();
+    const streams = [];
+    if (!contents) throw new Error('El archivo no tiene contenido visible.');
+    if (contents instanceof PDFArray) for (let i = 0; i < contents.size(); i++) streams.push(contents.lookup(i));
+    else streams.push(contents);
+    let text = '';
+    for (const st of streams) text += bytesToLatin1(decodePDFRawStream(st).decode()) + '\n';
+    const res = node.Resources();
+    const xobjects = {};
+    const xo = res && res.lookup(PDFName.of('XObject'));
+    if (xo) for (const [k, v] of xo.entries()) {
+      const o0 = ctx.lookup(v); const o = o0.dict || o0;
+      const st = o.lookup(PDFName.of('Subtype'));
+      if (st && st.toString() === '/Form') {
+        const bb = o.lookup(PDFName.of('BBox')).asArray().map((x) => x.asNumber());
+        const mt = o.lookup(PDFName.of('Matrix'));
+        xobjects[k.toString().slice(1)] = { type: 'form', bbox: bb, matrix: mt ? mt.asArray().map((x) => x.asNumber()) : null };
+      } else xobjects[k.toString().slice(1)] = { type: 'image' };
+    }
+    // capas ocultas
+    const hidden = new Set();
+    try {
+      const ocp = doc.catalog.lookup(PDFName.of('OCProperties'));
+      const D = ocp && ocp.lookup(PDFName.of('D'));
+      const OFF = D && D.lookup(PDFName.of('OFF'));
+      const props = res.lookup(PDFName.of('Properties'));
+      if (OFF && props) {
+        const off = new Set(OFF.asArray().map((r) => r.toString()));
+        for (const [k, v] of props.entries()) if (off.has(v.toString())) hidden.add(k.toString().slice(1));
+      }
+    } catch (e) { /* sin capas */ }
+    const mb = page.getMediaBox();
+    if (mb.x || mb.y) text = '1 0 0 1 ' + (-mb.x) + ' ' + (-mb.y) + ' cm\n' + text;
+    const pageBox = [0, 0, mb.width, mb.height];
+    const frags = Motor.fragment(text, pageBox, { xobjects }, hidden);
+    // imágenes: resolución aproximada
+    return { doc, text, frags, pageW: mb.width, pageH: mb.height };
+  }
+
+  /* Genera el PDF de una talla. fuente = resultado de leer() */
+  async function generarTalla(fuente, an, base, moldeBase, moldeTalla, nombreTalla, op) {
+    const { trans, avisos } = A.transformar(an, base, moldeBase, moldeTalla, op);
+    const dist = A.distribuir(moldeTalla, op);
+    const cont = A.contenido(fuente.text, fuente.frags, an, trans, moldeTalla, dist, op, fuente.pageH);
+    const out = await PDFDocument.create();
+    const [pg] = await out.copyPages(fuente.doc, [0]);
+    out.addPage(pg);
+    const n = pg.node;
+    for (const k of ['PieceInfo', 'LastModified', 'Thumb', 'Annots', 'Metadata', 'Group']) n.delete(PDFName.of(k));
+    // la transparencia de grupo se conserva
+    const g = fuente.doc.getPage(0).node.lookup(PDFName.of('Group'));
+    if (g) n.set(PDFName.of('Group'), out.context.obj({ Type: 'Group', S: 'Transparency', CS: 'DeviceCMYK', I: false, K: false }));
+    const box = out.context.obj([0, 0, dist.ancho, dist.alto]);
+    for (const k of ['MediaBox', 'CropBox', 'TrimBox', 'BleedBox', 'ArtBox']) n.set(PDFName.of(k), box);
+    const stream = out.context.flateStream(latin1ToBytes(cont));
+    n.set(PDFName.of('Contents'), out.context.register(stream));
+    if (op.rotulos) {
+      const font = await out.embedFont(StandardFonts.HelveticaBold);
+      for (const k of A.PIEZAS) {
+        const p = dist.pos[k], m = moldeTalla[k];
+        const txt = A.NOMBRES[k] + '  ·  TALLA ' + nombreTalla;
+        const size = 0.7 * A.CM;
+        const w = font.widthOfTextAtSize(txt, size);
+        pg.drawText(txt, { x: p.x + (m.w - w) / 2, y: dist.alto - (p.y + m.h + 1.1 * A.CM), size, font, color: cmyk(0.5, 0.5, 0.5, 1) });
+      }
+    }
+    out.setTitle('Talla ' + nombreTalla);
+    out.setProducer('Ajustador de tallas');
+    out.setCreator('Ajustador de tallas');
+    const bytes = await out.save({ useObjectStreams: true });
+    return { bytes, avisos, ancho: dist.ancho, alto: dist.alto };
+  }
+
+  const api = { leer, generarTalla };
+  if (isNode) module.exports = api; else global.Salida = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* Diseño de ejemplo (vectorial) para mostrar la herramienta funcionando. */
+(function (global) {
+  'use strict';
+  const isNode = typeof module !== 'undefined' && module.exports;
+  const L = global.PDFLib || (isNode ? require('pdf-lib') : null);
+  async function crearEjemplo() {
+    const { PDFDocument, cmyk, StandardFonts } = L;
+    const CM = 72 / 2.54;
+    const W = 208 * CM, H = 85 * CM;
+    const doc = await PDFDocument.create();
+    const pg = doc.addPage([W, H]);
+    const font = await doc.embedFont(StandardFonts.HelveticaBold);
+    const Y = (top, h) => H - (top + h) * CM; // de cm desde arriba a coordenada PDF
+    const fondo = cmyk(0.85, 0.55, 0.1, 0.55);
+    const oro = cmyk(0, 0.25, 0.85, 0.05);
+    const naranja = cmyk(0, 0.65, 0.95, 0);
+    const blanco = cmyk(0, 0, 0, 0);
+    const texto = (t, xc, top, size, color) => {
+      const s = size * CM; const w = font.widthOfTextAtSize(t, s);
+      pg.drawText(t, { x: xc * CM - w / 2, y: Y(top, 0) - s * 0.75, size: s, font, color });
+    };
+    const escudo = (xc, top, w, color) => {
+      const s = w / 10 * CM;
+      pg.drawSvgPath('M0,0 L10,0 L10,6 C10,9 7,11 5,12 C3,11 0,9 0,6 Z', { x: (xc - w / 2) * CM, y: Y(top, 0), scale: s, color });
+    };
+    const flores = (x0, x1, top) => {
+      for (let x = x0; x <= x1; x += 6.5) {
+        pg.drawCircle({ x: x * CM, y: Y(top + 4, 0), size: 3.2 * CM, color: naranja });
+        pg.drawCircle({ x: x * CM, y: Y(top + 4, 0), size: 1.2 * CM, color: oro });
+      }
+    };
+    // frente
+    pg.drawRectangle({ x: 80 * CM, y: 0, width: 57 * CM, height: H, color: fondo });
+    escudo(108.5, 22, 7, oro);
+    texto('EJEMPLO', 108.5, 30.5, 2.2, oro);
+    texto('Diseño de muestra', 108.5, 33.6, 1.1, blanco);
+    flores(84, 133, 62);
+    // espalda
+    pg.drawRectangle({ x: 141 * CM, y: 0, width: 62 * CM, height: H, color: fondo });
+    texto('TU EQUIPO', 172, 14, 4, oro);
+    texto('10', 172, 22, 16, blanco);
+    flores(145, 199, 62);
+    // mangas
+    escudo(43.5, 20, 7, oro);
+    texto('EJEMPLO', 43.5, 50, 2, oro);
+    return doc.save();
+  }
+  if (isNode) module.exports = { crearEjemplo }; else global.crearEjemplo = crearEjemplo;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>window.MOLDES = {"orden":["CH","M","G","XL","XXL","XXXL"],"modelos":{"manga-corta-caballero":{"nombre":"Manga corta \u00b7 Caballero","tallas":{"M":{"frente":{"w":1581.737,"h":2196.949,"d":"M 148.081,144.489 C 201.414,408.99 198.262,736.003 0,848.817 L 0,2196.949 L 1581.737,2196.949 L 1581.737,848.817 C 1383.475,736.003 1380.323,408.99 1433.657,144.489 L 1071.666,0 C 1063.664,164.852 990.051,324.561 802.626,334.423 C 615.202,324.561 541.588,164.852 533.586,0 L 148.081,144.489 Z Z","etiqueta":"M 3.038,2186.73 L 9.768,2186.73 L 9.768,2188.5 L 7.507,2188.5 L 7.507,2193.89 L 5.298,2193.89 L 5.298,2188.5 L 3.038,2188.5 L 3.038,2186.73 Z Z M 14.486,2192.71 L 11.979,2192.71 L 11.619,2193.89 L 9.361,2193.89 L 12.056,2186.73 L 14.477,2186.73 L 17.161,2193.89 L 14.844,2193.89 L 14.486,2192.71 Z Z M 14.018,2191.16 L 13.236,2188.587 L 12.451,2191.16 L 14.018,2191.16 Z Z M 17.859,2186.73 L 20.069,2186.73 L 20.069,2192.13 L 23.529,2192.13 L 23.529,2193.89 L 17.859,2193.89 L 17.859,2186.73 Z Z M 24.529,2186.73 L 26.739,2186.73 L 26.739,2192.13 L 30.199,2192.13 L 30.199,2193.89 L 24.529,2193.89 L 24.529,2186.73 Z Z M 35.604,2192.71 L 33.097,2192.71 L 32.737,2193.89 L 30.479,2193.89 L 33.174,2186.73 L 35.595,2186.73 L 38.279,2193.89 L 35.962,2193.89 L 35.604,2192.71 Z Z M 35.136,2191.16 L 34.354,2188.587 L 33.569,2191.16 L 35.136,2191.16 Z Z M 42.292,2186.73 L 45.211,2186.73 L 46.322,2191.087 L 47.437,2186.73 L 50.342,2186.73 L 50.342,2193.89 L 48.532,2193.89 L 48.532,2188.432 L 47.135,2193.89 L 45.495,2193.89 L 44.102,2188.432 L 44.102,2193.89 L 42.292,2193.89 L 42.292,2186.73 Z Z M 59.855,2190.96 L 61.795,2191.545 C 61.665,2192.088 61.46,2192.543 61.179,2192.907 C 60.899,2193.272 60.552,2193.547 60.135,2193.732 C 59.72,2193.917 59.192,2194.01 58.55,2194.01 C 57.77,2194.01 57.135,2193.897 56.64,2193.672 C 56.147,2193.445 55.722,2193.047 55.364,2192.479 C 55.005,2191.91 54.825,2191.18 54.825,2190.294 C 54.825,2189.11 55.14,2188.2 55.771,2187.564 C 56.402,2186.929 57.294,2186.61 58.447,2186.61 C 59.349,2186.61 60.059,2186.792 60.575,2187.157 C 61.09,2187.522 61.475,2188.082 61.725,2188.838 L 59.775,2189.27 C 59.707,2189.054 59.635,2188.895 59.56,2188.795 C 59.435,2188.627 59.284,2188.497 59.106,2188.407 C 58.925,2188.315 58.725,2188.27 58.504,2188.27 C 58,2188.27 57.615,2188.472 57.349,2188.874 C 57.147,2189.172 57.045,2189.642 57.045,2190.28 C 57.045,2191.074 57.165,2191.615 57.407,2191.91 C 57.649,2192.204 57.987,2192.35 58.424,2192.35 C 58.847,2192.35 59.167,2192.232 59.383,2191.994 C 59.6,2191.757 59.757,2191.412 59.855,2190.96 Z Z M 67.269,2192.71 L 64.762,2192.71 L 64.402,2193.89 L 62.144,2193.89 L 64.838,2186.73 L 67.26,2186.73 L 69.943,2193.89 L 67.627,2193.89 L 67.269,2192.71 Z Z M 66.8,2191.16 L 66.019,2188.587 L 65.234,2191.16 L 66.8,2191.16 Z Z M 70.652,2186.73 L 74.797,2186.73 C 75.487,2186.73 76.017,2186.902 76.387,2187.244 C 76.756,2187.585 76.942,2188.009 76.942,2188.514 C 76.942,2188.937 76.81,2189.3 76.545,2189.602 C 76.37,2189.805 76.112,2189.964 75.773,2190.082 C 76.289,2190.205 76.665,2190.417 76.909,2190.718 C 77.15,2191.02 77.272,2191.399 77.272,2191.854 C 77.272,2192.225 77.185,2192.558 77.014,2192.855 C 76.84,2193.152 76.603,2193.385 76.305,2193.559 C 76.118,2193.665 75.839,2193.744 75.464,2193.792 C 74.965,2193.857 74.635,2193.89 74.472,2193.89 L 70.652,2193.89 L 70.652,2186.73 Z Z M 72.882,2189.54 L 73.847,2189.54 C 74.192,2189.54 74.434,2189.48 74.568,2189.362 C 74.704,2189.242 74.772,2189.07 74.772,2188.845 C 74.772,2188.637 74.704,2188.474 74.568,2188.357 C 74.434,2188.239 74.197,2188.18 73.862,2188.18 L 72.882,2188.18 L 72.882,2189.54 Z Z M 72.882,2192.35 L 74.01,2192.35 C 74.392,2192.35 74.66,2192.282 74.817,2192.147 C 74.973,2192.012 75.052,2191.832 75.052,2191.604 C 75.052,2191.392 74.975,2191.222 74.82,2191.093 C 74.665,2190.965 74.393,2190.9 74.005,2190.9 L 72.882,2190.9 L 72.882,2192.35 Z Z M 82.653,2192.71 L 80.147,2192.71 L 79.787,2193.89 L 77.528,2193.89 L 80.223,2186.73 L 82.645,2186.73 L 85.328,2193.89 L 83.012,2193.89 L 82.653,2192.71 Z Z M 82.185,2191.16 L 81.403,2188.587 L 80.618,2191.16 L 82.185,2191.16 Z Z M 86.027,2186.73 L 88.237,2186.73 L 88.237,2192.13 L 91.697,2192.13 L 91.697,2193.89 L 86.027,2193.89 L 86.027,2186.73 Z Z M 92.697,2186.73 L 94.907,2186.73 L 94.907,2192.13 L 98.366,2192.13 L 98.366,2193.89 L 92.697,2193.89 L 92.697,2186.73 Z Z M 99.367,2186.73 L 105.286,2186.73 L 105.286,2188.26 L 101.587,2188.26 L 101.587,2189.4 L 105.016,2189.4 L 105.016,2190.86 L 101.587,2190.86 L 101.587,2192.27 L 105.396,2192.27 L 105.396,2193.89 L 99.367,2193.89 L 99.367,2186.73 Z Z M 106.618,2193.89 L 106.618,2186.73 L 110.305,2186.73 C 110.988,2186.73 111.511,2186.788 111.871,2186.907 C 112.233,2187.024 112.525,2187.242 112.746,2187.559 C 112.968,2187.877 113.078,2188.265 113.078,2188.722 C 113.078,2189.119 112.993,2189.462 112.823,2189.75 C 112.655,2190.04 112.421,2190.274 112.123,2190.453 C 111.935,2190.567 111.675,2190.662 111.346,2190.737 C 111.61,2190.825 111.801,2190.912 111.921,2191 C 112.001,2191.059 112.12,2191.185 112.275,2191.377 C 112.428,2191.569 112.532,2191.717 112.583,2191.822 L 113.658,2193.89 L 111.158,2193.89 L 109.976,2191.707 C 109.826,2191.423 109.693,2191.24 109.576,2191.155 C 109.416,2191.045 109.235,2190.99 109.033,2190.99 L 108.838,2190.99 L 108.838,2193.89 L 106.618,2193.89 Z Z M 108.838,2189.64 L 109.773,2189.64 C 109.873,2189.64 110.07,2189.607 110.36,2189.542 C 110.506,2189.514 110.626,2189.439 110.718,2189.317 C 110.811,2189.195 110.858,2189.057 110.858,2188.9 C 110.858,2188.669 110.785,2188.49 110.638,2188.367 C 110.491,2188.242 110.216,2188.18 109.811,2188.18 L 108.838,2188.18 L 108.838,2189.64 Z Z M 113.914,2190.315 C 113.914,2189.147 114.24,2188.237 114.891,2187.587 C 115.543,2186.935 116.449,2186.61 117.613,2186.61 C 118.804,2186.61 119.723,2186.93 120.368,2187.569 C 121.013,2188.209 121.334,2189.105 121.334,2190.257 C 121.334,2191.093 121.194,2191.779 120.913,2192.314 C 120.631,2192.848 120.223,2193.265 119.691,2193.564 C 119.158,2193.862 118.494,2194.01 117.7,2194.01 C 116.893,2194.01 116.224,2193.882 115.695,2193.625 C 115.166,2193.367 114.736,2192.96 114.408,2192.403 C 114.08,2191.849 113.914,2191.152 113.914,2190.315 Z Z M 116.125,2190.32 C 116.125,2191.042 116.26,2191.562 116.528,2191.877 C 116.798,2192.192 117.164,2192.35 117.628,2192.35 C 118.103,2192.35 118.473,2192.195 118.733,2191.887 C 118.994,2191.577 119.125,2191.024 119.125,2190.222 C 119.125,2189.549 118.988,2189.057 118.716,2188.747 C 118.443,2188.436 118.075,2188.28 117.608,2188.28 C 117.161,2188.28 116.801,2188.439 116.531,2188.753 C 116.26,2189.069 116.125,2189.592 116.125,2190.32 Z","cuello":329.737},"espalda":{"w":1581.738,"h":2190.502,"d":"M 148.081,140.926 C 185.877,355.616 224.171,702.275 0,845.256 L 0,2190.502 L 1581.738,2190.502 L 1581.738,845.256 C 1346.703,693.797 1404.836,341.979 1433.658,140.926 L 1080.501,0 C 1049.529,13.679 1030.372,91.543 786.987,98.174 C 541.523,101.38 527.634,17.497 501.238,0 L 148.081,140.926 Z Z","etiqueta":"M 5.013,2178.615 L 11.742,2178.615 L 11.742,2180.385 L 9.482,2180.385 L 9.482,2185.774 L 7.273,2185.774 L 7.273,2180.385 L 5.013,2180.385 L 5.013,2178.615 Z Z M 16.461,2184.594 L 13.954,2184.594 L 13.594,2185.774 L 11.336,2185.774 L 14.031,2178.615 L 16.452,2178.615 L 19.135,2185.774 L 16.819,2185.774 L 16.461,2184.594 Z Z M 15.992,2183.044 L 15.211,2180.471 L 14.426,2183.044 L 15.992,2183.044 Z Z M 19.834,2178.615 L 22.044,2178.615 L 22.044,2184.014 L 25.504,2184.014 L 25.504,2185.774 L 19.834,2185.774 L 19.834,2178.615 Z Z M 26.504,2178.615 L 28.714,2178.615 L 28.714,2184.014 L 32.174,2184.014 L 32.174,2185.774 L 26.504,2185.774 L 26.504,2178.615 Z Z M 37.579,2184.594 L 35.072,2184.594 L 34.712,2185.774 L 32.454,2185.774 L 35.149,2178.615 L 37.57,2178.615 L 40.254,2185.774 L 37.937,2185.774 L 37.579,2184.594 Z Z M 37.111,2183.044 L 36.329,2180.471 L 35.544,2183.044 L 37.111,2183.044 Z Z M 44.267,2178.615 L 47.186,2178.615 L 48.297,2182.971 L 49.412,2178.615 L 52.317,2178.615 L 52.317,2185.774 L 50.507,2185.774 L 50.507,2180.316 L 49.11,2185.774 L 47.47,2185.774 L 46.077,2180.316 L 46.077,2185.774 L 44.267,2185.774 L 44.267,2178.615 Z Z M 61.83,2182.844 L 63.77,2183.43 C 63.64,2183.973 63.435,2184.428 63.154,2184.791 C 62.874,2185.156 62.527,2185.431 62.11,2185.616 C 61.695,2185.801 61.167,2185.894 60.525,2185.894 C 59.745,2185.894 59.11,2185.781 58.615,2185.556 C 58.122,2185.329 57.697,2184.931 57.339,2184.363 C 56.98,2183.795 56.8,2183.064 56.8,2182.178 C 56.8,2180.994 57.115,2180.084 57.745,2179.448 C 58.377,2178.813 59.269,2178.494 60.422,2178.494 C 61.324,2178.494 62.034,2178.676 62.55,2179.041 C 63.065,2179.406 63.45,2179.966 63.7,2180.723 L 61.75,2181.154 C 61.682,2180.938 61.61,2180.779 61.535,2180.679 C 61.41,2180.511 61.258,2180.381 61.08,2180.291 C 60.9,2180.2 60.7,2180.154 60.479,2180.154 C 59.975,2180.154 59.59,2180.356 59.324,2180.758 C 59.122,2181.056 59.02,2181.526 59.02,2182.164 C 59.02,2182.958 59.14,2183.499 59.382,2183.794 C 59.624,2184.088 59.962,2184.234 60.399,2184.234 C 60.822,2184.234 61.142,2184.116 61.358,2183.878 C 61.575,2183.641 61.732,2183.296 61.83,2182.844 Z Z M 69.244,2184.594 L 66.737,2184.594 L 66.377,2185.774 L 64.119,2185.774 L 66.813,2178.615 L 69.235,2178.615 L 71.918,2185.774 L 69.602,2185.774 L 69.244,2184.594 Z Z M 68.775,2183.044 L 67.994,2180.471 L 67.209,2183.044 L 68.775,2183.044 Z Z M 72.627,2178.615 L 76.772,2178.615 C 77.462,2178.615 77.992,2178.786 78.362,2179.128 C 78.731,2179.47 78.917,2179.893 78.917,2180.398 C 78.917,2180.821 78.785,2181.184 78.52,2181.486 C 78.345,2181.689 78.087,2181.848 77.748,2181.966 C 78.263,2182.089 78.64,2182.301 78.883,2182.603 C 79.125,2182.904 79.247,2183.283 79.247,2183.738 C 79.247,2184.109 79.16,2184.443 78.989,2184.739 C 78.815,2185.036 78.578,2185.269 78.28,2185.443 C 78.093,2185.549 77.813,2185.628 77.438,2185.676 C 76.94,2185.741 76.61,2185.774 76.447,2185.774 L 72.627,2185.774 L 72.627,2178.615 Z Z M 74.857,2181.425 L 75.822,2181.425 C 76.167,2181.425 76.408,2181.364 76.543,2181.246 C 76.679,2181.126 76.747,2180.954 76.747,2180.729 C 76.747,2180.521 76.679,2180.358 76.543,2180.241 C 76.408,2180.123 76.171,2180.064 75.837,2180.064 L 74.857,2180.064 L 74.857,2181.425 Z Z M 74.857,2184.234 L 75.985,2184.234 C 76.367,2184.234 76.635,2184.166 76.792,2184.031 C 76.948,2183.896 77.027,2183.716 77.027,2183.488 C 77.027,2183.276 76.95,2183.106 76.795,2182.978 C 76.64,2182.849 76.368,2182.784 75.98,2182.784 L 74.857,2182.784 L 74.857,2184.234 Z Z M 84.628,2184.594 L 82.122,2184.594 L 81.762,2185.774 L 79.503,2185.774 L 82.198,2178.615 L 84.62,2178.615 L 87.303,2185.774 L 84.987,2185.774 L 84.628,2184.594 Z Z M 84.16,2183.044 L 83.378,2180.471 L 82.593,2183.044 L 84.16,2183.044 Z Z M 88.001,2178.615 L 90.211,2178.615 L 90.211,2184.014 L 93.671,2184.014 L 93.671,2185.774 L 88.001,2185.774 L 88.001,2178.615 Z Z M 94.672,2178.615 L 96.881,2178.615 L 96.881,2184.014 L 100.341,2184.014 L 100.341,2185.774 L 94.672,2185.774 L 94.672,2178.615 Z Z M 101.341,2178.615 L 107.261,2178.615 L 107.261,2180.144 L 103.562,2180.144 L 103.562,2181.284 L 106.991,2181.284 L 106.991,2182.744 L 103.562,2182.744 L 103.562,2184.154 L 107.371,2184.154 L 107.371,2185.774 L 101.341,2185.774 L 101.341,2178.615 Z Z M 108.593,2185.774 L 108.593,2178.615 L 112.28,2178.615 C 112.963,2178.615 113.486,2178.673 113.846,2178.791 C 114.208,2178.908 114.5,2179.126 114.721,2179.443 C 114.943,2179.761 115.053,2180.149 115.053,2180.606 C 115.053,2181.003 114.968,2181.346 114.798,2181.634 C 114.63,2181.924 114.396,2182.158 114.098,2182.338 C 113.91,2182.451 113.649,2182.546 113.321,2182.621 C 113.585,2182.709 113.776,2182.796 113.896,2182.884 C 113.976,2182.943 114.095,2183.069 114.25,2183.261 C 114.403,2183.453 114.506,2183.601 114.558,2183.706 L 115.633,2185.774 L 113.133,2185.774 L 111.951,2183.591 C 111.801,2183.308 111.668,2183.124 111.551,2183.039 C 111.391,2182.93 111.209,2182.874 111.008,2182.874 L 110.813,2182.874 L 110.813,2185.774 L 108.593,2185.774 Z Z M 110.813,2181.524 L 111.748,2181.524 C 111.848,2181.524 112.044,2181.491 112.335,2181.426 C 112.481,2181.398 112.601,2181.323 112.693,2181.201 C 112.786,2181.079 112.833,2180.941 112.833,2180.784 C 112.833,2180.553 112.76,2180.374 112.613,2180.251 C 112.466,2180.126 112.191,2180.064 111.786,2180.064 L 110.813,2180.064 L 110.813,2181.524 Z Z M 115.889,2182.199 C 115.889,2181.031 116.215,2180.121 116.866,2179.471 C 117.518,2178.819 118.424,2178.494 119.588,2178.494 C 120.779,2178.494 121.698,2178.814 122.343,2179.453 C 122.988,2180.093 123.309,2180.989 123.309,2182.141 C 123.309,2182.978 123.169,2183.663 122.888,2184.198 C 122.606,2184.732 122.198,2185.149 121.666,2185.448 C 121.133,2185.746 120.469,2185.894 119.674,2185.894 C 118.868,2185.894 118.199,2185.766 117.669,2185.509 C 117.141,2185.251 116.711,2184.844 116.383,2184.287 C 116.055,2183.733 115.889,2183.036 115.889,2182.199 Z Z M 118.1,2182.204 C 118.1,2182.926 118.235,2183.446 118.503,2183.761 C 118.773,2184.076 119.139,2184.234 119.603,2184.234 C 120.078,2184.234 120.448,2184.079 120.708,2183.771 C 120.969,2183.461 121.099,2182.908 121.099,2182.106 C 121.099,2181.433 120.962,2180.941 120.691,2180.631 C 120.418,2180.32 120.049,2180.164 119.583,2180.164 C 119.136,2180.164 118.776,2180.323 118.506,2180.638 C 118.235,2180.953 118.1,2181.476 118.1,2182.204 Z","cuello":96.662},"mangaD":{"w":1384.526,"h":666.133,"d":"M 0,319.093 C 53.874,376.872 151.639,462.973 182.027,552.75 L 182.027,666.133 C 585.029,666.133 799.498,666.133 1202.5,666.133 L 1202.5,552.75 C 1230.716,467.371 1321.965,377.766 1384.526,319.093 C 1176.396,309.65 1122.995,194.687 1052.754,137.346 C 972.192,71.579 829.193,-0.907 682.872,0 C 601.888,0.502 429.592,46.043 303.451,162.179 C 209.255,248.905 177.391,305.497 0,319.093 Z Z","etiqueta":"M 185.173,656.362 L 191.769,656.362 L 191.769,658.132 L 189.554,658.132 L 189.554,663.522 L 187.388,663.522 L 187.388,658.132 L 185.173,658.132 L 185.173,656.362 Z Z M 196.392,662.342 L 193.936,662.342 L 193.583,663.522 L 191.37,663.522 L 194.011,656.362 L 196.384,656.362 L 199.014,663.522 L 196.743,663.522 L 196.392,662.342 Z Z M 195.933,660.792 L 195.168,658.219 L 194.398,660.792 L 195.933,660.792 Z Z M 199.698,656.362 L 201.863,656.362 L 201.863,661.762 L 205.254,661.762 L 205.254,663.522 L 199.698,663.522 L 199.698,656.362 Z Z M 206.234,656.362 L 208.4,656.362 L 208.4,661.762 L 211.79,661.762 L 211.79,663.522 L 206.234,663.522 L 206.234,656.362 Z Z M 217.087,662.342 L 214.63,662.342 L 214.278,663.522 L 212.064,663.522 L 214.706,656.362 L 217.079,656.362 L 219.708,663.522 L 217.438,663.522 L 217.087,662.342 Z Z M 216.628,660.792 L 215.862,658.219 L 215.092,660.792 L 216.628,660.792 Z Z M 223.641,656.362 L 226.5,656.362 L 227.59,660.719 L 228.682,656.362 L 231.529,656.362 L 231.529,663.522 L 229.755,663.522 L 229.755,658.064 L 228.387,663.522 L 226.78,663.522 L 225.414,658.064 L 225.414,663.522 L 223.641,663.522 L 223.641,656.362 Z Z M 240.852,660.592 L 242.753,661.177 C 242.625,661.721 242.425,662.176 242.148,662.539 C 241.874,662.904 241.534,663.179 241.126,663.364 C 240.72,663.549 240.202,663.642 239.573,663.642 C 238.808,663.642 238.186,663.529 237.701,663.304 C 237.218,663.077 236.801,662.679 236.45,662.11 C 236.099,661.542 235.923,660.812 235.923,659.926 C 235.923,658.742 236.231,657.832 236.849,657.195 C 237.468,656.561 238.342,656.242 239.472,656.242 C 240.355,656.242 241.051,656.424 241.557,656.789 C 242.062,657.154 242.439,657.714 242.684,658.471 L 240.773,658.902 C 240.707,658.685 240.636,658.527 240.563,658.427 C 240.44,658.259 240.292,658.129 240.117,658.039 C 239.94,657.947 239.744,657.902 239.527,657.902 C 239.034,657.902 238.657,658.104 238.395,658.505 C 238.197,658.804 238.098,659.274 238.098,659.912 C 238.098,660.705 238.216,661.247 238.453,661.542 C 238.689,661.836 239.021,661.982 239.449,661.982 C 239.864,661.982 240.177,661.864 240.39,661.626 C 240.602,661.389 240.755,661.044 240.852,660.592 Z Z M 248.116,662.342 L 245.66,662.342 L 245.307,663.522 L 243.094,663.522 L 245.735,656.362 L 248.108,656.362 L 250.737,663.522 L 248.467,663.522 L 248.116,662.342 Z Z M 247.657,660.792 L 246.891,658.219 L 246.122,660.792 L 247.657,660.792 Z Z M 251.432,656.362 L 255.493,656.362 C 256.169,656.362 256.689,656.534 257.052,656.876 C 257.414,657.217 257.595,657.641 257.595,658.145 C 257.595,658.569 257.466,658.932 257.207,659.234 C 257.035,659.437 256.782,659.596 256.45,659.714 C 256.955,659.837 257.324,660.049 257.562,660.351 C 257.799,660.652 257.919,661.03 257.919,661.485 C 257.919,661.857 257.834,662.19 257.666,662.487 C 257.496,662.784 257.264,663.017 256.971,663.19 C 256.789,663.297 256.514,663.376 256.147,663.424 C 255.658,663.489 255.335,663.522 255.175,663.522 L 251.432,663.522 L 251.432,656.362 Z Z M 253.617,659.172 L 254.562,659.172 C 254.901,659.172 255.137,659.112 255.27,658.994 C 255.402,658.874 255.469,658.702 255.469,658.477 C 255.469,658.269 255.402,658.105 255.27,657.989 C 255.137,657.87 254.905,657.812 254.577,657.812 L 253.617,657.812 L 253.617,659.172 Z Z M 253.617,661.982 L 254.722,661.982 C 255.096,661.982 255.359,661.913 255.513,661.779 C 255.666,661.644 255.743,661.464 255.743,661.235 C 255.743,661.024 255.668,660.854 255.516,660.726 C 255.365,660.597 255.097,660.532 254.717,660.532 L 253.617,660.532 L 253.617,661.982 Z Z M 263.192,662.342 L 260.736,662.342 L 260.383,663.522 L 258.17,663.522 L 260.811,656.362 L 263.184,656.362 L 265.814,663.522 L 263.543,663.522 L 263.192,662.342 Z Z M 262.734,660.792 L 261.968,658.219 L 261.198,660.792 L 262.734,660.792 Z Z M 266.498,656.362 L 268.664,656.362 L 268.664,661.762 L 272.054,661.762 L 272.054,663.522 L 266.498,663.522 L 266.498,656.362 Z Z M 273.034,656.362 L 275.2,656.362 L 275.2,661.762 L 278.59,661.762 L 278.59,663.522 L 273.034,663.522 L 273.034,656.362 Z Z M 279.57,656.362 L 285.372,656.362 L 285.372,657.892 L 281.746,657.892 L 281.746,659.032 L 285.106,659.032 L 285.106,660.492 L 281.746,660.492 L 281.746,661.902 L 285.479,661.902 L 285.479,663.522 L 279.57,663.522 L 279.57,656.362 Z Z M 286.676,663.522 L 286.676,656.362 L 290.289,656.362 C 290.959,656.362 291.472,656.421 291.825,656.539 C 292.179,656.655 292.465,656.874 292.682,657.19 C 292.899,657.509 293.007,657.897 293.007,658.354 C 293.007,658.751 292.924,659.094 292.757,659.382 C 292.592,659.672 292.363,659.906 292.071,660.086 C 291.887,660.199 291.632,660.294 291.31,660.369 C 291.568,660.457 291.756,660.544 291.873,660.632 C 291.952,660.69 292.068,660.817 292.22,661.009 C 292.37,661.201 292.471,661.349 292.522,661.454 L 293.575,663.522 L 291.125,663.522 L 289.967,661.339 C 289.82,661.056 289.69,660.872 289.576,660.787 C 289.419,660.677 289.24,660.622 289.043,660.622 L 288.852,660.622 L 288.852,663.522 L 286.676,663.522 Z Z M 288.852,659.272 L 289.768,659.272 C 289.866,659.272 290.059,659.239 290.343,659.174 C 290.487,659.145 290.605,659.07 290.694,658.949 C 290.786,658.827 290.831,658.689 290.831,658.532 C 290.831,658.301 290.76,658.122 290.616,657.999 C 290.472,657.874 290.202,657.812 289.806,657.812 L 288.852,657.812 L 288.852,659.272 Z Z M 293.827,659.947 C 293.827,658.779 294.145,657.869 294.784,657.219 C 295.423,656.567 296.311,656.242 297.451,656.242 C 298.619,656.242 299.519,656.562 300.151,657.2 C 300.783,657.84 301.098,658.737 301.098,659.889 C 301.098,660.726 300.961,661.41 300.685,661.946 C 300.409,662.48 300.009,662.897 299.487,663.196 C 298.965,663.494 298.315,663.642 297.535,663.642 C 296.745,663.642 296.091,663.514 295.571,663.257 C 295.053,662.999 294.632,662.592 294.31,662.035 C 293.989,661.48 293.827,660.784 293.827,659.947 Z Z M 295.993,659.952 C 295.993,660.674 296.124,661.194 296.387,661.509 C 296.652,661.824 297.012,661.982 297.465,661.982 C 297.931,661.982 298.294,661.827 298.549,661.519 C 298.805,661.209 298.932,660.655 298.932,659.854 C 298.932,659.18 298.798,658.689 298.532,658.379 C 298.265,658.067 297.903,657.912 297.446,657.912 C 297.008,657.912 296.655,658.071 296.391,658.386 C 296.124,658.7 295.993,659.224 295.993,659.952 Z"},"mangaI":{"w":1384.526,"h":666.133,"d":"M 0,319.093 C 53.874,376.872 151.639,462.973 182.027,552.75 L 182.027,666.133 C 585.028,666.133 799.498,666.133 1202.499,666.133 L 1202.499,552.75 C 1230.716,467.371 1321.965,377.766 1384.526,319.093 C 1176.395,309.65 1122.995,194.687 1052.754,137.346 C 972.192,71.579 829.193,-0.907 682.872,0 C 601.888,0.502 429.591,46.043 303.451,162.179 C 209.255,248.905 177.391,305.497 0,319.093 Z Z","etiqueta":"M 185.173,656.362 L 191.768,656.362 L 191.768,658.132 L 189.554,658.132 L 189.554,663.522 L 187.388,663.522 L 187.388,658.132 L 185.173,658.132 L 185.173,656.362 Z Z M 196.392,662.342 L 193.936,662.342 L 193.583,663.522 L 191.37,663.522 L 194.011,656.362 L 196.384,656.362 L 199.014,663.522 L 196.743,663.522 L 196.392,662.342 Z Z M 195.933,660.792 L 195.168,658.219 L 194.398,660.792 L 195.933,660.792 Z Z M 199.698,656.362 L 201.863,656.362 L 201.863,661.762 L 205.254,661.762 L 205.254,663.522 L 199.698,663.522 L 199.698,656.362 Z Z M 206.234,656.362 L 208.4,656.362 L 208.4,661.762 L 211.79,661.762 L 211.79,663.522 L 206.234,663.522 L 206.234,656.362 Z Z M 217.087,662.342 L 214.63,662.342 L 214.277,663.522 L 212.064,663.522 L 214.706,656.362 L 217.078,656.362 L 219.708,663.522 L 217.438,663.522 L 217.087,662.342 Z Z M 216.628,660.792 L 215.862,658.219 L 215.092,660.792 L 216.628,660.792 Z Z M 223.641,656.362 L 226.5,656.362 L 227.59,660.719 L 228.682,656.362 L 231.529,656.362 L 231.529,663.522 L 229.755,663.522 L 229.755,658.064 L 228.387,663.522 L 226.78,663.522 L 225.414,658.064 L 225.414,663.522 L 223.641,663.522 L 223.641,656.362 Z Z M 240.852,660.592 L 242.753,661.177 C 242.625,661.721 242.424,662.176 242.148,662.539 C 241.874,662.904 241.534,663.179 241.126,663.364 C 240.719,663.549 240.202,663.642 239.573,663.642 C 238.808,663.642 238.186,663.529 237.701,663.304 C 237.218,663.077 236.801,662.679 236.45,662.111 C 236.099,661.542 235.922,660.812 235.922,659.926 C 235.922,658.742 236.231,657.832 236.849,657.196 C 237.467,656.561 238.341,656.242 239.471,656.242 C 240.355,656.242 241.051,656.424 241.557,656.789 C 242.062,657.154 242.439,657.714 242.684,658.471 L 240.773,658.902 C 240.706,658.685 240.636,658.527 240.562,658.427 C 240.44,658.259 240.291,658.129 240.117,658.039 C 239.94,657.947 239.744,657.902 239.527,657.902 C 239.034,657.902 238.657,658.104 238.395,658.505 C 238.197,658.804 238.098,659.274 238.098,659.912 C 238.098,660.705 238.216,661.247 238.452,661.542 C 238.689,661.836 239.021,661.982 239.449,661.982 C 239.864,661.982 240.177,661.864 240.389,661.626 C 240.602,661.389 240.755,661.044 240.852,660.592 Z Z M 248.116,662.342 L 245.66,662.342 L 245.307,663.522 L 243.094,663.522 L 245.735,656.362 L 248.108,656.362 L 250.737,663.522 L 248.467,663.522 L 248.116,662.342 Z Z M 247.657,660.792 L 246.891,658.219 L 246.122,660.792 L 247.657,660.792 Z Z M 251.432,656.362 L 255.493,656.362 C 256.169,656.362 256.689,656.534 257.052,656.876 C 257.414,657.217 257.595,657.641 257.595,658.145 C 257.595,658.569 257.466,658.932 257.207,659.234 C 257.035,659.437 256.782,659.596 256.45,659.714 C 256.955,659.837 257.324,660.049 257.562,660.351 C 257.799,660.652 257.919,661.031 257.919,661.485 C 257.919,661.857 257.834,662.191 257.666,662.487 C 257.496,662.784 257.264,663.017 256.971,663.191 C 256.788,663.297 256.514,663.376 256.147,663.424 C 255.658,663.489 255.335,663.522 255.175,663.522 L 251.432,663.522 L 251.432,656.362 Z Z M 253.617,659.172 L 254.562,659.172 C 254.9,659.172 255.137,659.112 255.27,658.994 C 255.402,658.874 255.469,658.702 255.469,658.477 C 255.469,658.269 255.402,658.106 255.27,657.989 C 255.137,657.87 254.905,657.812 254.577,657.812 L 253.617,657.812 L 253.617,659.172 Z Z M 253.617,661.982 L 254.722,661.982 C 255.096,661.982 255.359,661.914 255.513,661.779 C 255.666,661.644 255.743,661.464 255.743,661.235 C 255.743,661.024 255.668,660.854 255.516,660.726 C 255.365,660.597 255.097,660.532 254.717,660.532 L 253.617,660.532 L 253.617,661.982 Z Z M 263.192,662.342 L 260.736,662.342 L 260.383,663.522 L 258.17,663.522 L 260.811,656.362 L 263.184,656.362 L 265.814,663.522 L 263.543,663.522 L 263.192,662.342 Z Z M 262.733,660.792 L 261.968,658.219 L 261.198,660.792 L 262.733,660.792 Z Z M 266.498,656.362 L 268.663,656.362 L 268.663,661.762 L 272.054,661.762 L 272.054,663.522 L 266.498,663.522 L 266.498,656.362 Z Z M 273.034,656.362 L 275.2,656.362 L 275.2,661.762 L 278.59,661.762 L 278.59,663.522 L 273.034,663.522 L 273.034,656.362 Z Z M 279.57,656.362 L 285.371,656.362 L 285.371,657.892 L 281.746,657.892 L 281.746,659.032 L 285.106,659.032 L 285.106,660.492 L 281.746,660.492 L 281.746,661.902 L 285.479,661.902 L 285.479,663.522 L 279.57,663.522 L 279.57,656.362 Z Z M 286.676,663.522 L 286.676,656.362 L 290.289,656.362 C 290.959,656.362 291.472,656.421 291.824,656.539 C 292.179,656.656 292.465,656.874 292.682,657.191 C 292.899,657.509 293.007,657.897 293.007,658.354 C 293.007,658.751 292.924,659.094 292.757,659.382 C 292.592,659.672 292.363,659.906 292.071,660.086 C 291.887,660.199 291.632,660.294 291.31,660.369 C 291.568,660.457 291.756,660.544 291.873,660.632 C 291.952,660.69 292.067,660.817 292.219,661.009 C 292.37,661.201 292.471,661.349 292.522,661.454 L 293.575,663.522 L 291.125,663.522 L 289.967,661.339 C 289.82,661.056 289.69,660.872 289.575,660.787 C 289.419,660.677 289.24,660.622 289.043,660.622 L 288.852,660.622 L 288.852,663.522 L 286.676,663.522 Z Z M 288.852,659.272 L 289.768,659.272 C 289.866,659.272 290.059,659.239 290.343,659.174 C 290.487,659.146 290.604,659.07 290.694,658.949 C 290.785,658.827 290.831,658.689 290.831,658.532 C 290.831,658.301 290.759,658.122 290.615,657.999 C 290.472,657.874 290.202,657.812 289.806,657.812 L 288.852,657.812 L 288.852,659.272 Z Z M 293.827,659.947 C 293.827,658.779 294.145,657.869 294.784,657.219 C 295.422,656.567 296.311,656.242 297.451,656.242 C 298.619,656.242 299.518,656.562 300.15,657.2 C 300.783,657.84 301.098,658.737 301.098,659.889 C 301.098,660.726 300.96,661.41 300.685,661.946 C 300.409,662.48 300.008,662.897 299.487,663.196 C 298.965,663.494 298.315,663.642 297.535,663.642 C 296.745,663.642 296.09,663.514 295.571,663.257 C 295.053,662.999 294.632,662.592 294.31,662.035 C 293.988,661.48 293.827,660.784 293.827,659.947 Z Z M 295.992,659.952 C 295.992,660.674 296.124,661.194 296.387,661.509 C 296.652,661.824 297.012,661.982 297.465,661.982 C 297.931,661.982 298.293,661.827 298.548,661.519 C 298.805,661.209 298.932,660.655 298.932,659.854 C 298.932,659.18 298.798,658.689 298.532,658.379 C 298.265,658.067 297.903,657.912 297.446,657.912 C 297.008,657.912 296.655,658.071 296.391,658.386 C 296.124,658.7 295.992,659.224 295.992,659.952 Z"}}}}}};</script>
+<script>(function () {
+  'use strict';
+  const A = window.Adaptador, S = window.Salida;
+  const CM = A.CM;
+  const $ = (id) => document.getElementById(id);
+  const MOLDES = window.MOLDES;
+  const pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+  if (pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const st = {
+    modelo: Object.keys(MOLDES.modelos)[0],
+    tallaBase: null,
+    fuente: null, an: null, base: null,
+    src: null, k: 1,
+    nombre: '', ejemplo: false,
+    sel: 'frente',
+    resultados: [],
+    hits: [], z: 1,
+  };
+
+  const modelo = () => MOLDES.modelos[st.modelo];
+  const disponibles = () => MOLDES.orden.filter((t) => modelo().tallas[t]);
+  const molde = (t) => modelo().tallas[t];
+  const cm = (v) => (v / CM).toFixed(1).replace('-0.0', '0.0');
+
+  function opciones() {
+    const num = (id, d) => { const v = parseFloat($(id).value); return isFinite(v) ? v : d; };
+    let fondo = null;
+    const f = $('fondoManga').value;
+    if (f === 'negro') fondo = [0.5, 0.5, 0.5, 1];
+    else if (f === 'otro') fondo = ['cC', 'cM', 'cY', 'cK'].map((id) => Math.min(100, Math.max(0, num(id, 0))) / 100);
+    return { cuelloLogo: num('cuelloLogo', 10), margenManga: num('margenManga', 2.8), sangrado: 0.3, fondoManga: fondo, rotulos: $('rotulos').checked, marcaTalla: $('marcaTalla').checked };
+  }
+
+  function cmykCss(c) {
+    if (!c) return null;
+    const r = 255 * (1 - c[0]) * (1 - c[3]), g = 255 * (1 - c[1]) * (1 - c[3]), b = 255 * (1 - c[2]) * (1 - c[3]);
+    return 'rgb(' + [r, g, b].map((v) => Math.round(Math.max(v, c[3] >= 1 && (c[0] + c[1] + c[2]) > 0 ? 22 : 0))).join(',') + ')';
+  }
+
+  function mensaje(id, texto, tipo) {
+    const el = $(id);
+    if (!texto) { el.hidden = true; return; }
+    el.hidden = false; el.className = 'mensaje ' + (tipo || 'info'); el.textContent = texto;
+  }
+
+  // ---------- Selects ----------
+  function llenarModelos() {
+    const s = $('modelo'); s.innerHTML = '';
+    for (const [k, m] of Object.entries(MOLDES.modelos)) { const o = document.createElement('option'); o.value = k; o.textContent = m.nombre; s.appendChild(o); }
+    s.value = st.modelo;
+  }
+  function llenarTallas() {
+    const tb = $('tallaBase'); tb.innerHTML = '';
+    for (const t of disponibles()) { const o = document.createElement('option'); o.value = t; o.textContent = t; tb.appendChild(o); }
+    if (!st.tallaBase || !molde(st.tallaBase)) st.tallaBase = disponibles().includes('M') ? 'M' : disponibles()[0];
+    tb.value = st.tallaBase;
+    const cont = $('tallas'); cont.innerHTML = '';
+    for (const t of MOLDES.orden) {
+      const hay = !!molde(t);
+      const lab = document.createElement('label');
+      lab.className = 'talla-op' + (hay ? '' : ' falta');
+      lab.innerHTML = '<input type="checkbox" id="t_' + t + '"' + (hay ? ' checked' : ' disabled') + '> ' + t + (hay ? '' : ' <small>falta molde</small>');
+      cont.appendChild(lab);
+    }
+  }
+
+  // ---------- Carga ----------
+  async function cargar(bytes, nombre, esEjemplo) {
+    mensaje('msgCarga', 'Leyendo el diseño…', 'info');
+    $('nombreArchivo').textContent = nombre;
+    $('etiquetaEj').hidden = !esEjemplo;
+    try {
+      const fuente = await S.leer(bytes.slice());
+      const an = A.analizar(fuente.frags, fuente.pageH);
+      if (!an.piezas.frente.length && !an.piezas.espalda.length) {
+        throw new Error('No encontré los paneles de frente y espalda (rectángulos de al menos 30 × 40 cm). Si es un .ai, guárdalo en Illustrator con la opción "Crear archivo compatible con PDF" activada, o expórtalo como PDF, y vuelve a subirlo.');
+      }
+      st.fuente = fuente; st.an = an; st.nombre = nombre; st.ejemplo = esEjemplo;
+      st.base = A.colocacionBase(an, tallaMolde(st.tallaBase), opciones());
+      await renderFuente(bytes);
+      limpiarResultados();
+      const avisos = [];
+      if (!an.piezas.mangaD.length && !an.piezas.mangaI.length) avisos.push('No encontré diseños de manga; las mangas saldrán solo con el color de fondo.');
+      const res = baja(bytes);
+      if (res) avisos.push(res);
+      mensaje('msgCarga', avisos.join(' '), 'info');
+      if (!avisos.length) mensaje('msgCarga', '');
+      listaPiezas();
+      dibujar();
+    } catch (e) {
+      console.error(e);
+      mensaje('msgCarga', e && e.message && !/^[A-Z][a-z]+Error/.test(e.message) && /[áéíóúñ ]/.test(e.message) ? e.message : 'No se pudo leer el archivo. Verifica que sea un .ai guardado con "Crear archivo compatible con PDF" o un PDF exportado desde Illustrator.', 'error');
+    }
+  }
+  function baja() { return ''; }
+  const tallaMolde = (t) => molde(t);
+
+  async function renderFuente(bytes) {
+    st.src = null;
+    if (!pdfjsLib) return;
+    const doc = await pdfjsLib.getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+    const page = await doc.getPage(1);
+    const vp1 = page.getViewport({ scale: 1 });
+    const k = Math.min(0.6, 3600 / vp1.width, 1800 / vp1.height);
+    const vp = page.getViewport({ scale: k });
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+    await page.render({ canvasContext: c.getContext('2d'), viewport: vp, background: 'rgba(0,0,0,0)' }).promise;
+    st.src = c; st.k = k * (st.fuente.pageW / vp1.width);
+    doc.destroy();
+  }
+
+  // ---------- Lista de piezas ----------
+  function resumen(k) {
+    const ids = st.an.piezas[k];
+    if (!ids.length) return 'sin diseño';
+    const f = ids.filter((i) => st.an.els[i].rol === 'fondo').length;
+    const o = ids.length - f;
+    return (f ? 'fondo' : '') + (f && o ? ' + ' : '') + (o ? o + (o === 1 ? ' elemento' : ' elementos') : '');
+  }
+  function listaPiezas() {
+    const c = $('listaPiezas'); c.innerHTML = '';
+    for (const k of ['frente', 'espalda', 'mangaD', 'mangaI']) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'pieza' + (st.sel === k ? ' sel' : '');
+      b.innerHTML = '<span>' + A.NOMBRES[k].charAt(0) + A.NOMBRES[k].slice(1).toLowerCase() + '</span><small>' + resumen(k) + '</small>';
+      b.addEventListener('click', () => { st.sel = k; listaPiezas(); dibujar(); });
+      c.appendChild(b);
+    }
+    lectura();
+  }
+  function lectura() {
+    if (!st.an) return;
+    const k = st.sel, m = tallaMolde(st.tallaBase)[k], ids = st.an.piezas[k], off = st.base[k];
+    let t = '';
+    if (!ids.length) t = 'Esta pieza no tiene diseño.';
+    else if (k === 'frente' || k === 'espalda') {
+      const arr = ids.map((i) => st.an.els[i]).filter((e) => e.rol === 'arriba');
+      if (arr.length) t = 'Primer logo a ' + cm(Math.min(...arr.map((e) => e.box[1])) + off.dv - m.cuello) + ' cm del cuello';
+      else {
+        const b = A.cajaDe(st.an, ids);
+        t = 'Panel: ' + cm(-(b[1] + off.dv)) + ' cm sobre el molde, ' + cm(b[3] + off.dv - m.h) + ' cm sobrante abajo';
+      }
+    } else {
+      const b = A.cajaDe(st.an, ids);
+      t = 'Diseño a ' + cm(m.h - (b[3] + off.dv)) + ' cm del borde inferior';
+    }
+    $('lectura').textContent = t;
+  }
+
+  // ---------- Dibujo de la talla base ----------
+  let pendiente = false;
+  function dibujar() {
+    if (pendiente) return; pendiente = true;
+    requestAnimationFrame(() => { pendiente = false; pintar(); });
+  }
+  function pintar() {
+    const cv = $('lienzo');
+    if (!st.an) return;
+    const op = opciones();
+    const mb = tallaMolde(st.tallaBase);
+    const dist = A.distribuir(mb, op);
+    const css = getComputedStyle(document.documentElement);
+    const acento = css.getPropertyValue('--acento').trim(), guia = css.getPropertyValue('--guia').trim();
+    const ancho = cv.clientWidth || 900;
+    const z = ancho / dist.ancho; st.z = z;
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(ancho * dpr); cv.height = Math.round(dist.alto * z * dpr);
+    cv.style.height = (dist.alto * z) + 'px';
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, ancho, dist.alto * z);
+    st.hits = [];
+    for (const k of A.PIEZAS) {
+      const m = mb[k], p = dist.pos[k];
+      st.hits.push({ k, x: p.x, y: p.y, w: m.w, h: m.h });
+      const path = new Path2D(m.d);
+      ctx.save();
+      ctx.translate(p.x * z, p.y * z); ctx.scale(z, z);
+      if ((k === 'mangaD' || k === 'mangaI') && op.fondoManga) { ctx.fillStyle = cmykCss(op.fondoManga); ctx.fill(path); }
+      ctx.save(); ctx.clip(path);
+      const ids = st.an.piezas[k];
+      if (ids.length && st.src) {
+        const b = A.cajaDe(st.an, ids), off = st.base[k], kk = st.k;
+        ctx.drawImage(st.src, b[0] * kk, b[1] * kk, (b[2] - b[0]) * kk, (b[3] - b[1]) * kk, b[0] + off.du, b[1] + off.dv, b[2] - b[0], b[3] - b[1]);
+      }
+      ctx.restore();
+      ctx.lineWidth = (st.sel === k ? 3 : 1) / z; ctx.strokeStyle = st.sel === k ? acento : '#8f99a3'; ctx.stroke(path);
+      // guías
+      ctx.setLineDash([6 / z, 4 / z]); ctx.lineWidth = 1.5 / z; ctx.strokeStyle = guia;
+      ctx.font = '600 ' + (11 / z) + 'px "JetBrains Mono", monospace'; ctx.fillStyle = guia;
+      if (k === 'frente' || k === 'espalda') {
+        const y = m.cuello + op.cuelloLogo * CM;
+        ctx.beginPath(); ctx.moveTo(m.w * 0.12, y); ctx.lineTo(m.w * 0.88, y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(m.w / 2, m.cuello); ctx.lineTo(m.w / 2, y); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillText(op.cuelloLogo + ' cm', m.w / 2 + 6 / z, m.cuello + (y - m.cuello) / 2 + 4 / z);
+      } else {
+        const y = m.h - op.margenManga * CM;
+        ctx.beginPath(); ctx.moveTo(m.w * 0.18, y); ctx.lineTo(m.w * 0.82, y); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillText(op.margenManga + ' cm', m.w * 0.82 + 4 / z, y + 4 / z);
+      }
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#3b4249'; ctx.font = '600 ' + (11 / z) + 'px Barlow, Arial, sans-serif'; ctx.textAlign = 'center';
+      if (op.rotulos) ctx.fillText(A.NOMBRES[k] + ' · ' + st.tallaBase, m.w / 2, m.h + Math.max(1.3 * CM, 15 / z));
+      ctx.textAlign = 'start';
+      ctx.restore();
+    }
+    lectura();
+  }
+
+  // ---------- Mover ----------
+  function mover(k, du, dv) {
+    if (!st.base || !st.base[k]) return;
+    st.base[k].du += du; st.base[k].dv += dv;
+    marcarCambio(); dibujar();
+  }
+  function marcarCambio() {
+    if (st.resultados.length) mensaje('msgGen', 'Cambiaste el acomodo o las opciones. Vuelve a generar para actualizar los PDF.', 'info');
+  }
+  function piezaEn(x, y) {
+    for (const h of st.hits) if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h + 1.5 * CM) return h.k;
+    return null;
+  }
+  function eventos() {
+    const cv = $('lienzo');
+    let arr = null;
+    cv.addEventListener('pointerdown', (e) => {
+      if (!st.an) return;
+      const r = cv.getBoundingClientRect();
+      const x = (e.clientX - r.left) / st.z, y = (e.clientY - r.top) / st.z;
+      const k = piezaEn(x, y);
+      if (!k) return;
+      st.sel = k; listaPiezas();
+      arr = { x: e.clientX, y: e.clientY };
+      cv.setPointerCapture(e.pointerId); cv.classList.add('arrastrando');
+      dibujar();
+    });
+    cv.addEventListener('pointermove', (e) => {
+      if (!arr) return;
+      const dx = (e.clientX - arr.x) / st.z, dy = (e.clientY - arr.y) / st.z;
+      arr = { x: e.clientX, y: e.clientY };
+      mover(st.sel, dx, dy);
+    });
+    const fin = () => { arr = null; cv.classList.remove('arrastrando'); };
+    cv.addEventListener('pointerup', fin); cv.addEventListener('pointercancel', fin);
+    cv.addEventListener('keydown', (e) => {
+      const paso = (e.shiftKey ? 2 : 0.5) * CM;
+      const m = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
+      if (m) { e.preventDefault(); mover(st.sel, m[0] * paso, m[1] * paso); }
+    });
+    document.querySelectorAll('[data-mv]').forEach((b) => b.addEventListener('click', () => {
+      const [dx, dy] = b.dataset.mv.split(',').map(Number);
+      if (dx === 0 && dy === 0) {
+        const ids = st.an && st.an.piezas[st.sel];
+        if (!ids || !ids.length) return;
+        const bx = A.cajaDe(st.an, ids), m = tallaMolde(st.tallaBase)[st.sel];
+        st.base[st.sel].du = (m.w - (bx[2] - bx[0])) / 2 - bx[0];
+        marcarCambio(); dibujar(); return;
+      }
+      mover(st.sel, dx * 0.5 * CM, dy * 0.5 * CM);
+    }));
+    $('btnAuto').addEventListener('click', () => { if (!st.an) return; st.base = A.colocacionBase(st.an, tallaMolde(st.tallaBase), opciones()); marcarCambio(); dibujar(); });
+    $('btnCambiarCuerpo').addEventListener('click', () => intercambiar('frente', 'espalda'));
+    $('btnCambiarMangas').addEventListener('click', () => intercambiar('mangaD', 'mangaI'));
+    for (const id of ['cuelloLogo', 'margenManga', 'rotulos', 'marcaTalla', 'cC', 'cM', 'cY', 'cK']) $(id).addEventListener('input', () => { marcarCambio(); dibujar(); });
+    $('fondoManga').addEventListener('change', () => { $('cmykCaja').hidden = $('fondoManga').value !== 'otro'; marcarCambio(); dibujar(); });
+    $('tallaBase').addEventListener('change', () => { st.tallaBase = $('tallaBase').value; if (st.an) st.base = A.colocacionBase(st.an, tallaMolde(st.tallaBase), opciones()); marcarCambio(); dibujar(); });
+    $('modelo').addEventListener('change', () => { st.modelo = $('modelo').value; llenarTallas(); if (st.an) st.base = A.colocacionBase(st.an, tallaMolde(st.tallaBase), opciones()); limpiarResultados(); dibujar(); });
+    window.addEventListener('resize', dibujar);
+    // archivo
+    const zona = $('zona'), inp = $('archivo');
+    zona.addEventListener('click', () => inp.click());
+    zona.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } });
+    zona.addEventListener('dragover', (e) => { e.preventDefault(); zona.classList.add('sobre'); });
+    zona.addEventListener('dragleave', () => zona.classList.remove('sobre'));
+    zona.addEventListener('drop', (e) => { e.preventDefault(); zona.classList.remove('sobre'); const f = e.dataTransfer.files[0]; if (f) abrir(f); });
+    inp.addEventListener('change', () => { const f = inp.files[0]; if (f) abrir(f); inp.value = ''; });
+    $('btnEjemplo').addEventListener('click', cargarEjemplo);
+    $('btnGenerar').addEventListener('click', generar);
+    $('btnZip').addEventListener('click', descargarZip);
+  }
+  function intercambiar(a, b) {
+    if (!st.an) return;
+    const p = st.an.piezas; [p[a], p[b]] = [p[b], p[a]];
+    const nb = A.colocacionBase(st.an, tallaMolde(st.tallaBase), opciones());
+    st.base[a] = nb[a]; st.base[b] = nb[b];
+    listaPiezas(); marcarCambio(); dibujar();
+  }
+  async function abrir(f) {
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    await cargar(bytes, f.name, false);
+  }
+  async function cargarEjemplo() {
+    const bytes = await window.crearEjemplo();
+    await cargar(new Uint8Array(bytes), 'diseno-de-ejemplo.pdf', true);
+  }
+
+  // ---------- Generar ----------
+  function limpiarResultados() { st.resultados = []; $('resultados').innerHTML = ''; $('btnZip').disabled = true; mensaje('msgGen', ''); $('progreso').textContent = ''; }
+  const espera = () => new Promise((r) => setTimeout(r, 30));
+  function base(nombre) { return (nombre || 'diseno').replace(/\.(ai|pdf)$/i, '').replace(/[^\w\-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'diseno'; }
+
+  async function generar() {
+    if (!st.an) { mensaje('msgGen', 'Primero sube un diseño.', 'error'); return; }
+    const tallas = MOLDES.orden.filter((t) => molde(t) && $('t_' + t) && $('t_' + t).checked);
+    if (!tallas.length) { mensaje('msgGen', 'Marca al menos una talla.', 'error'); return; }
+    limpiarResultados();
+    const btn = $('btnGenerar'); btn.disabled = true;
+    const op = opciones();
+    const mb = tallaMolde(st.tallaBase);
+    try {
+      for (let i = 0; i < tallas.length; i++) {
+        const t = tallas[i];
+        $('progreso').textContent = 'Generando talla ' + t + ' (' + (i + 1) + ' de ' + tallas.length + ')…';
+        await espera();
+        const r = await S.generarTalla(st.fuente, st.an, st.base, mb, molde(t), t, op);
+        const nombre = base(st.nombre) + '_TALLA_' + t + '.pdf';
+        const item = { talla: t, nombre, bytes: r.bytes, avisos: r.avisos, ancho: r.ancho, alto: r.alto };
+        st.resultados.push(item);
+        await tarjeta(item);
+      }
+      $('progreso').textContent = 'Listo: ' + tallas.length + (tallas.length === 1 ? ' talla.' : ' tallas.');
+      $('btnZip').disabled = st.resultados.length < 2;
+    } catch (e) {
+      console.error(e);
+      mensaje('msgGen', 'Algo falló al generar: ' + (e && e.message ? e.message : e), 'error');
+    } finally { btn.disabled = false; }
+  }
+
+  async function tarjeta(item) {
+    const div = document.createElement('article');
+    div.className = 'tarjeta';
+    div.innerHTML = '<header class="fila" style="justify-content:space-between"><h3>Talla ' + item.talla + '</h3><span class="medida">' + cm(item.ancho) + ' × ' + cm(item.alto) + ' cm</span></header>';
+    const cv = document.createElement('canvas');
+    cv.setAttribute('aria-label', 'Vista previa talla ' + item.talla);
+    div.appendChild(cv);
+    const av = document.createElement('div'); av.className = 'avisos';
+    if (item.avisos.length) for (const a of item.avisos) { const s = document.createElement('div'); s.className = 'aviso'; s.textContent = a; av.appendChild(s); }
+    else { const s = document.createElement('div'); s.className = 'ok'; s.textContent = 'Todo cupo sin ampliar el fondo.'; av.appendChild(s); }
+    div.appendChild(av);
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'primario'; b.textContent = 'Descargar PDF';
+    b.addEventListener('click', () => guardar(item.nombre, new Blob([item.bytes], { type: 'application/pdf' })));
+    div.appendChild(b);
+    $('resultados').appendChild(div);
+    if (pdfjsLib) {
+      try {
+        const doc = await pdfjsLib.getDocument({ data: item.bytes.slice(), isEvalSupported: false }).promise;
+        const page = await doc.getPage(1);
+        const v1 = page.getViewport({ scale: 1 });
+        const w = 720; const vp = page.getViewport({ scale: w / v1.width });
+        cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+        await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+        doc.destroy();
+      } catch (e) { console.error(e); cv.remove(); }
+    }
+  }
+
+  async function guardar(nombre, blob) {
+    try {
+      if (window.claude && typeof window.claude.use === 'function') {
+        const d = await window.claude.use('downloads');
+        if (d) { await d.save({ filename: nombre, data: blob }); return; }
+      }
+    } catch (e) {
+      if (e && e.code === 'declined') return;
+      if (e && e.code && !['unavailable', 'not_granted', 'capability_disabled', 'capability_removed'].includes(e.code)) {
+        mensaje('msgGen', 'No se pudo descargar (' + e.code + ').', 'error'); return;
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  async function descargarZip() {
+    if (!st.resultados.length || !window.JSZip) return;
+    $('progreso').textContent = 'Armando el ZIP…';
+    const zip = new window.JSZip();
+    for (const r of st.resultados) zip.file(r.nombre, r.bytes);
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+    $('progreso').textContent = '';
+    await guardar(base(st.nombre) + '_TODAS_LAS_TALLAS.zip', blob);
+  }
+
+  // ---------- Inicio ----------
+  llenarModelos(); llenarTallas(); eventos();
+  cargarEjemplo();
+})();
+</script>
