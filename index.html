@@ -1534,11 +1534,16 @@ footer { color: var(--suave); font-size: .82rem; }
       } else if (k === 'cuello') {
         ctx.setLineDash([]);
       } else if (op.mangaDesde === 'hombro') {
-        const y = op.mangaHombro * CM;
-        ctx.beginPath(); ctx.moveTo(m.w * 0.25, y); ctx.lineTo(m.w * 0.75, y); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(m.w / 2, 0); ctx.lineTo(m.w / 2, y); ctx.stroke();
+        // manga larga: zona recomendada para el texto (10 cm libres arriba y abajo, franja central de 6 a 10 cm)
+        const y1 = op.mangaHombro * CM, y2 = m.h - op.mangaHombro * CM;
+        ctx.beginPath(); ctx.moveTo(m.w * 0.2, y1); ctx.lineTo(m.w * 0.8, y1); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(m.w * 0.2, y2); ctx.lineTo(m.w * 0.8, y2); ctx.stroke();
+        ctx.setLineDash([2 / z, 3 / z]); ctx.lineWidth = 1 / z;
+        for (const dx of [-5, -3, 3, 5]) { ctx.beginPath(); ctx.moveTo(m.w / 2 + dx * CM, y1); ctx.lineTo(m.w / 2 + dx * CM, y2); ctx.stroke(); }
         ctx.setLineDash([]);
-        ctx.fillText(op.mangaHombro + ' cm', m.w / 2 + 6 / z, y / 2 + 4 / z);
+        ctx.fillText(op.mangaHombro + ' cm', m.w / 2 + 6 / z, y1 - 6 / z);
+        ctx.fillText(op.mangaHombro + ' cm', m.w / 2 + 6 / z, y2 + 14 / z);
+        ctx.fillText('6–10', m.w / 2 - 14 / z, (y1 + y2) / 2);
       } else {
         const y = m.h - op.margenManga * CM;
         ctx.beginPath(); ctx.moveTo(m.w * 0.18, y); ctx.lineTo(m.w * 0.82, y); ctx.stroke();
