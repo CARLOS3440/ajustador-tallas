@@ -827,7 +827,13 @@ footer { color: var(--suave); font-size: .82rem; }
         let s = 1, cu = off.du + dx, cv = off.dv + dyF;
         const L = [bf[0] + cu, bf[1] + cv, bf[2] + cu, bf[3] + cv];
         const sangr = (k === 'cuello' ? 0 : op.sangrado) * CM;
-        const O = [s_.w / 2, cuerpo ? s_.cuello + op.cuelloLogo * CM : (panelManga ? s_.h * 0.75 : (hombro ? (op.mangaHombro || 10) * CM : s_.h / 2))];
+        // punto fijo de la ampliación: lo que está ahí no se mueve (línea del logo / línea del hombro)
+        let O = [s_.w / 2, cuerpo ? s_.cuello + op.cuelloLogo * CM : (hombro ? (op.mangaHombro || 10) * CM : (panelManga ? s_.h * 0.75 : s_.h / 2))];
+        if (panelManga && hombro) {
+          // el inicio del diseño de la manga (texto) se queda donde está; si empieza más abajo, se usa su borde superior
+          const txt = ids.map((i) => an.els[i]).filter((e) => (e.box[2] - e.box[0]) < 0.5 * (bf[2] - bf[0]) && (e.box[3] - e.box[1]) >= 15 * CM);
+          if (txt.length) O[1] = Math.min(...txt.map((e) => e.box[1])) + cv;
+        }
         const need = [O[0] + sangr, O[1] + sangr, (s_.w + sangr) - O[0], (s_.h + sangr) - O[1]];
         const have = [O[0] - L[0], O[1] - L[1], L[2] - O[0], L[3] - O[1]];
         for (let i = 0; i < 4; i++) { if (have[i] > 0) s = Math.max(s, need[i] / have[i]); }
@@ -1444,6 +1450,14 @@ footer { color: var(--suave); font-size: .82rem; }
     const el = $('avisoBase'); const w = anchoPanel();
     if (!st.an || !w) { el.hidden = true; return; }
     const m = tallaMolde(st.tallaBase).frente;
+    const mm = tallaMolde(st.tallaBase).mangaD;
+    const pm = st.an.piezas.mangaD.map((i) => st.an.els[i]).filter((e) => e.rol === 'fondo');
+    const wm = pm.length ? Math.max(...pm.map((e) => e.box[2] - e.box[0])) : 0;
+    if (wm && mm && mm.w > wm + 3 * CM && !(m.w > w + 1 * CM)) {
+      el.hidden = false;
+      el.textContent = 'El panel de las mangas mide ' + cm(wm) + ' cm de ancho y la manga ' + st.tallaBase + ' mide ' + cm(mm.w) + ' cm, así que su fondo se amplía para cubrirla. Si el diseño se hizo para otra talla, elígela aquí.';
+      return;
+    }
     if (m.w > w + 1 * CM) {
       el.hidden = false;
       el.textContent = 'El panel del diseño mide ' + cm(w) + ' cm de ancho y el molde ' + st.tallaBase + ' mide ' + cm(m.w) + ' cm, por eso no lo cubre. Elige aquí la talla para la que se hizo el diseño (sugerida: ' + tallaSugerida() + ') y marca ' + st.tallaBase + ' en la sección 03: al generarla, el fondo se amplía solo.';
@@ -1494,6 +1508,8 @@ footer { color: var(--suave); font-size: .82rem; }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, ancho, dist.alto * z);
     st.hits = [];
+    let tr = null;
+    try { tr = A.transformar(st.an, st.base, mb, mb, op); } catch (e) { tr = null; }
     for (const k of A.PIEZAS) {
       const m = mb[k], p = dist.pos[k];
       if (!m || !p) continue;
@@ -1506,7 +1522,15 @@ footer { color: var(--suave); font-size: .82rem; }
       const ids = st.an.piezas[k];
       if (ids.length && st.src) {
         const b = A.cajaDe(st.an, ids), off = st.base[k], kk = st.k;
-        ctx.drawImage(st.src, b[0] * kk, b[1] * kk, (b[2] - b[0]) * kk, (b[3] - b[1]) * kk, b[0] + off.du, b[1] + off.dv, b[2] - b[0], b[3] - b[1]);
+        // mangas y cuello: se muestra igual que en el PDF (con la ampliación de fondo si hace falta)
+        const t = (k !== 'frente' && k !== 'espalda' && tr && tr.trans[k]) ? tr.trans[k].find((x) => st.an.els[x.id].rol === 'fondo') : null;
+        if (t && t.s > 1.0005) {
+          ctx.save(); ctx.translate(t.cu, t.cv); ctx.scale(t.s, t.s);
+          ctx.drawImage(st.src, b[0] * kk, b[1] * kk, (b[2] - b[0]) * kk, (b[3] - b[1]) * kk, b[0], b[1], b[2] - b[0], b[3] - b[1]);
+          ctx.restore();
+        } else {
+          ctx.drawImage(st.src, b[0] * kk, b[1] * kk, (b[2] - b[0]) * kk, (b[3] - b[1]) * kk, b[0] + off.du, b[1] + off.dv, b[2] - b[0], b[3] - b[1]);
+        }
       }
       ctx.restore();
       ctx.lineWidth = (st.sel === k ? 3 : 1) / z; ctx.strokeStyle = st.sel === k ? acento : '#8f99a3'; ctx.stroke(path);
